@@ -4,6 +4,8 @@
 //
 //  Created by Bojan Mijic on 06.12.2024.
 //
+// Testing if v1.1 is pushed to GitHub repo
+
 
 # SnakeAI-iOS
 
@@ -27,5 +29,3 @@ An iOS game implementation of Snake using artificial intelligence.
 - Xcode 16.2 beta
 - macOS Ventura or later
 - iOS 17.0+ target device/simulator
-
-/ testing if v1.1. is pushed to GitHub repo
