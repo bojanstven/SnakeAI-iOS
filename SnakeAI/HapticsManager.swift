@@ -14,8 +14,8 @@ class HapticsManager: ObservableObject {
         
         do {
             engine = try CHHapticEngine()
-            try engine?.start()
             
+            // Restart the engine in case it stops
             engine?.resetHandler = { [weak self] in
                 print("Restarting Haptic engine...")
                 do {
@@ -25,38 +25,76 @@ class HapticsManager: ObservableObject {
                 }
             }
             
+            // Stop handler
             engine?.stoppedHandler = { reason in
                 print("Stop Handler: The engine stopped for reason: \(reason.rawValue)")
+                self.prepareHaptics() // Try to reinitialize
             }
             
+            // Start the engine and keep it running
+            try engine?.start()
         } catch {
             print("There was an error creating the haptics engine: \(error.localizedDescription)")
+        }
+    }
+    
+    private func ensureEngineRunning() {
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
+        
+        if engine == nil {
+            prepareHaptics()
+        }
+        
+        do {
+            try engine?.start()
+        } catch {
+            print("Failed to start engine: \(error.localizedDescription)")
+            prepareHaptics() // Try to reinitialize if start fails
         }
     }
     
     func foodEatenHaptic() {
         guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
         
+        ensureEngineRunning()
+        
         do {
             let pattern = try foodPattern()
-            try engine?.start()
             let player = try engine?.makePlayer(with: pattern)
             try player?.start(atTime: CHHapticTimeImmediate)
         } catch {
             print("Failed to play food haptic pattern: \(error.localizedDescription)")
+            prepareHaptics() // Try to recover
         }
     }
     
     func gameOverHaptic() {
         guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
         
+        ensureEngineRunning()
+        
         do {
             let pattern = try gameOverPattern()
-            try engine?.start()
             let player = try engine?.makePlayer(with: pattern)
             try player?.start(atTime: CHHapticTimeImmediate)
         } catch {
             print("Failed to play game over haptic pattern: \(error.localizedDescription)")
+            prepareHaptics() // Try to recover
+        }
+    }
+    
+    func toggleHaptic() {
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
+        
+        ensureEngineRunning()
+        
+        do {
+            let pattern = try togglePattern()
+            let player = try engine?.makePlayer(with: pattern)
+            try player?.start(atTime: CHHapticTimeImmediate)
+        } catch {
+            print("Failed to play toggle haptic pattern: \(error.localizedDescription)")
+            prepareHaptics() // Try to recover
         }
     }
     
@@ -157,5 +195,29 @@ class HapticsManager: ObservableObject {
         events.append(fadeOut)
         
         return try CHHapticPattern(events: events, parameters: [])
+    }
+    
+    private func togglePattern() throws -> CHHapticPattern {
+        // Quick, crisp toggle sensation
+        let toggleClick = CHHapticEvent(
+            eventType: .hapticTransient,
+            parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.5),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.9)
+            ],
+            relativeTime: 0
+        )
+        
+        // Subtle follow-up tap
+        let followupTap = CHHapticEvent(
+            eventType: .hapticTransient,
+            parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.3),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.7)
+            ],
+            relativeTime: 0.05
+        )
+        
+        return try CHHapticPattern(events: [toggleClick, followupTap], parameters: [])
     }
 }

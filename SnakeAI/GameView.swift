@@ -21,15 +21,21 @@ enum Direction {
 
 struct GameView: View {
     @StateObject private var hapticsManager = HapticsManager()
-    @State private var isPaused = false
     @StateObject private var scoreManager = ScoreManager()
+    @StateObject private var gameLoop = GameLoop()
+    @State private var isPaused = false
     @State private var score = 0
     @State private var snakePositions = [Position(x: 0, y: 0)]
     @State private var foodPosition = Position(x: 0, y: 0)
     @State private var direction = Direction.right
     @State private var isGameOver = false
-    @State private var gameTimer: Timer?
     @State private var lastDirection = Direction.right
+    
+    @State private var wallsEnabled = false
+    @State private var gamepadConnected = false
+    @State private var autoplayEnabled = false
+    @State private var settingsOpen = false
+    @State private var isInitialized = false
     
     private let moveInterval: TimeInterval = 0.2
     private let frameWidth: CGFloat = 1
@@ -68,11 +74,13 @@ struct GameView: View {
         ]
         
         generateNewFoodPosition(maxX: layout.maxX, maxY: layout.maxY)
+        print("New game started! Grid size: \(layout.maxX)x\(layout.maxY)")
         
-        gameTimer?.invalidate()
-        gameTimer = Timer.scheduledTimer(withTimeInterval: moveInterval, repeats: true) { _ in
+        // Set up game loop
+        gameLoop.frameCallback = { [self] in
             moveSnake(maxX: layout.maxX, maxY: layout.maxY)
         }
+        gameLoop.start()
     }
     
     private func generateNewFoodPosition(maxX: Int, maxY: Int) {
@@ -95,11 +103,26 @@ struct GameView: View {
         case .none: return
         }
         
+        // For moveSnake function
         if newHead.x < 0 || newHead.x >= maxX || newHead.y < 0 || newHead.y >= maxY {
-            endGame()
-            return
+            if !wallsEnabled {  // When walls button is OFF (black), die
+                endGame()
+                return
+            } else {  // When walls button is ON (white), teleport
+                // Wrap around logic
+                if newHead.x < 0 {
+                    newHead.x = maxX - 1
+                } else if newHead.x >= maxX {
+                    newHead.x = 0
+                }
+                if newHead.y < 0 {
+                    newHead.y = maxY - 1
+                } else if newHead.y >= maxY {
+                    newHead.y = 0
+                }
+            }
         }
-        
+        // Check self collision
         if snakePositions.contains(newHead) {
             endGame()
             return
@@ -111,8 +134,9 @@ struct GameView: View {
         if newHead == foodPosition {
             scoreManager.updateScores(newScore: score + 1)
             score = score + 1
+            hapticsManager.foodEatenHaptic()
             generateNewFoodPosition(maxX: maxX, maxY: maxY)
-            hapticsManager.foodEatenHaptic() // Add this line
+            print("Snake grew! New length: \(snakePositions.count + 1)")
         } else {
             snakePositions.removeLast()
         }
@@ -121,20 +145,17 @@ struct GameView: View {
     private func togglePause(maxX: Int, maxY: Int) {
         isPaused = !isPaused
         if isPaused {
-            gameTimer?.invalidate()
-            gameTimer = nil
+            gameLoop.stop()
         } else {
-            gameTimer = Timer.scheduledTimer(withTimeInterval: moveInterval, repeats: true) { _ in
-                moveSnake(maxX: maxX, maxY: maxY)
-            }
+            gameLoop.start()
         }
     }
     
     private func endGame() {
-        gameTimer?.invalidate()
-        gameTimer = nil
+        gameLoop.stop()
         isGameOver = true
-        hapticsManager.gameOverHaptic() // Add this line
+        hapticsManager.gameOverHaptic()
+        print("Game Over! Final Score: \(score)")
     }
     
     private func tryChangeDirection(_ newDirection: Direction) {
@@ -149,7 +170,7 @@ struct GameView: View {
             let buttonSize = min(geometry.size.width * 0.15, 50.0)
             
             ZStack {
-                Color(red: 0.9, green: 1.0, blue: 0.9)
+                Color(red: 0.65, green: 0.75, blue: 0.65)  // More greenish background
                     .edgesIgnoringSafeArea(.all)
                 
                 VStack(spacing: 0) {
@@ -179,8 +200,16 @@ struct GameView: View {
                             .fill(Color(red: 0.9, green: 1.0, blue: 0.9))
                         
                         Rectangle()
-                            .stroke(Color(red: 0.0, green: 0.5, blue: 0.0), lineWidth: frameWidth)
-                        
+                            .stroke(
+                                Color(red: 0.0, green: 0.5, blue: 0.0),
+                                style: StrokeStyle(
+                                    lineWidth: frameWidth,
+                                    lineCap: .round,
+                                    lineJoin: .round,
+                                    dash: wallsEnabled ? [2, 5] : [],  // Dotted when walls button is ON (white), solid when OFF (black)
+                                    dashPhase: 0
+                                )
+                            )
                         ForEach(0..<snakePositions.count, id: \.self) { index in
                             Rectangle()
                                 .fill(index == 0
@@ -263,13 +292,20 @@ struct GameView: View {
                                     let verticalAmount = gesture.translation.height
                                     
                                     if abs(horizontalAmount) > abs(verticalAmount) {
-                                        tryChangeDirection(horizontalAmount > 0 ? .right : .left)
+                                        let newDirection = horizontalAmount > 0 ? Direction.right : Direction.left
+                                        if newDirection != direction.opposite && newDirection != lastDirection.opposite {
+                                            direction = newDirection
+                                        }
                                     } else {
-                                        tryChangeDirection(verticalAmount > 0 ? .down : .up)
+                                        let newDirection = verticalAmount > 0 ? Direction.down : Direction.up
+                                        if newDirection != direction.opposite && newDirection != lastDirection.opposite {
+                                            direction = newDirection
+                                        }
                                     }
                                 }
                             }
                     )
+
                     .gesture(
                         SpatialTapGesture(count: 1)
                             .simultaneously(with: SpatialTapGesture(count: 1))
@@ -280,48 +316,82 @@ struct GameView: View {
                             }
                     )
                     
-                    HStack(spacing: geometry.size.width * 0.05) {
-                        Button(action: { tryChangeDirection(.left) }) {
-                            Image(systemName: "arrow.left")
+                    HStack(spacing: geometry.size.width * 0.02) {  // Reduced spacing between buttons
+                        // Walls toggle
+                        Button(action: {
+                            wallsEnabled.toggle()
+                            hapticsManager.toggleHaptic()
+                            print("Walls \(wallsEnabled ? "enabled" : "disabled")")
+                        }) {
+                            HStack(spacing: 2) {
+                                Image(systemName: wallsEnabled ? "shield.lefthalf.filled.slash" : "shield.lefthalf.filled")
+                                    .font(.title2)
+                                Text("Walls")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .lineLimit(1)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: buttonSize)
+                            .background(Color(red: 0.0, green: 0.5, blue: 0.0))
+                            .foregroundColor(wallsEnabled ? .white : .black)  // Now black by default, white when enabled
+                            .cornerRadius(8)
+                        }
+
+                        // Gamepad status - icon only
+                        Button(action: {}) {
+                            Image(systemName: "gamecontroller.fill")
                                 .font(.title2)
                                 .frame(width: buttonSize, height: buttonSize)
                                 .background(Color(red: 0.0, green: 0.5, blue: 0.0))
-                                .foregroundColor(.white)
+                                .foregroundColor(gamepadConnected ? .white : .black)
                                 .cornerRadius(8)
                         }
+                        .disabled(true)
                         
-                        Button(action: { tryChangeDirection(.up) }) {
-                            Image(systemName: "arrow.up")
-                                .font(.title2)
-                                .frame(width: buttonSize, height: buttonSize)
-                                .background(Color(red: 0.0, green: 0.5, blue: 0.0))
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
+                        // Autoplay toggle
+                        Button(action: {
+                            autoplayEnabled.toggle()
+                            hapticsManager.toggleHaptic()
+                        }) {
+                            HStack(spacing: 2) {  // Minimal spacing between icon and text
+                                Image(systemName: "paperplane.fill")
+                                    .font(.title2)
+                                Text("Auto")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .lineLimit(1)
+                            }
+                            .frame(maxWidth: .infinity)  // Fill available space
+                            .frame(height: buttonSize)
+                            .background(Color(red: 0.0, green: 0.5, blue: 0.0))
+                            .foregroundColor(autoplayEnabled ? .white : .black)
+                            .cornerRadius(8)
                         }
                         
-                        Button(action: { tryChangeDirection(.down) }) {
-                            Image(systemName: "arrow.down")
+                        // Settings toggle
+                        Button(action: {
+                            settingsOpen.toggle()
+                            hapticsManager.toggleHaptic()
+                        }) {
+                            Image(systemName: "gearshape.fill")
                                 .font(.title2)
                                 .frame(width: buttonSize, height: buttonSize)
                                 .background(Color(red: 0.0, green: 0.5, blue: 0.0))
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                        }
-                        
-                        Button(action: { tryChangeDirection(.right) }) {
-                            Image(systemName: "arrow.right")
-                                .font(.title2)
-                                .frame(width: buttonSize, height: buttonSize)
-                                .background(Color(red: 0.0, green: 0.5, blue: 0.0))
-                                .foregroundColor(.white)
+                                .foregroundColor(settingsOpen ? .white : .black)
                                 .cornerRadius(8)
                         }
                     }
-                    .padding(.vertical, geometry.size.height * 0.01)
+                    .padding(.horizontal, geometry.size.width * 0.02)  // Minimal padding at edges
+                    .padding(.vertical, geometry.size.height * 0.01)   // Minimal vertical padding
                 }
             }
             .onAppear {
                 startGame(with: layout)
+            }
+            .task {
+                if !isInitialized {
+                    await scoreManager.fetchScores()
+                    isInitialized = true
+                }
             }
         }
     }
