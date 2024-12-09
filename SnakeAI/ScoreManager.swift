@@ -22,7 +22,7 @@ class ScoreManager: ObservableObject {
     
     func fetchScores() async {
         isLoading = true
-        print("Starting to fetch scores from CloudKit...")
+        print("🐍 Starting to fetch scores from CloudKit...")
         
         let privateDB = container.privateCloudDatabase
         let highScoreSort = NSSortDescriptor(key: "highScore", ascending: false)
@@ -34,14 +34,14 @@ class ScoreManager: ObservableObject {
             if let record = try? result.matchResults.first?.1.get() {
                 self.recordID = record.recordID
                 self.highScore = record["highScore"] as? Int ?? 0
-                print("Successfully fetched high score: \(self.highScore)")
+                print("🐍 Successfully fetched high score: \(self.highScore)")
             } else {
                 // No records found, create initial record
                 await self.saveHighScore()
-                print("No records found, created initial record")
+                print("🐍 No records found, created initial record")
             }
         } catch {
-            print("Error fetching from CloudKit: \(error.localizedDescription)")
+            print("🐍 Error fetching from CloudKit: \(error.localizedDescription)")
         }
         
         isLoading = false
@@ -67,7 +67,7 @@ class ScoreManager: ObservableObject {
                     record["highScore"] = highScore as CKRecordValue
                     let savedRecord = try await privateDB.save(record)
                     self.recordID = savedRecord.recordID
-                    print("Successfully updated high score: \(highScore)")
+                    print("🐍 Successfully updated high score: \(highScore)")
                     return
                 }
             }
@@ -77,10 +77,10 @@ class ScoreManager: ObservableObject {
             newRecord["highScore"] = highScore as CKRecordValue
             let savedRecord = try await privateDB.save(newRecord)
             self.recordID = savedRecord.recordID
-            print("Successfully created new high score record: \(highScore)")
-            
+            print("🐍 Successfully created new high score record: \(highScore)")
+
         } catch {
-            print("Error saving to CloudKit: \(error.localizedDescription)")
+            print("🐍 Error saving to CloudKit: \(error.localizedDescription)")
         }
     }
 }

@@ -17,24 +17,24 @@ class HapticsManager: ObservableObject {
             
             // Restart the engine in case it stops
             engine?.resetHandler = { [weak self] in
-                print("Restarting Haptic engine...")
+                print("🐍 Restarting Haptic engine...")
                 do {
                     try self?.engine?.start()
                 } catch {
-                    print("Failed to restart engine: \(error.localizedDescription)")
+                    print("🐍 Failed to restart engine: \(error.localizedDescription)")
                 }
             }
             
             // Stop handler
             engine?.stoppedHandler = { reason in
-                print("Stop Handler: The engine stopped for reason: \(reason.rawValue)")
+                print("🐍 Stop Handler: The engine stopped for reason: \(reason.rawValue)")
                 self.prepareHaptics() // Try to reinitialize
             }
             
             // Start the engine and keep it running
             try engine?.start()
         } catch {
-            print("There was an error creating the haptics engine: \(error.localizedDescription)")
+            print("🐍 There was an error creating the haptics engine: \(error.localizedDescription)")
         }
     }
     
@@ -48,7 +48,7 @@ class HapticsManager: ObservableObject {
         do {
             try engine?.start()
         } catch {
-            print("Failed to start engine: \(error.localizedDescription)")
+            print("🐍 Failed to start engine: \(error.localizedDescription)")
             prepareHaptics() // Try to reinitialize if start fails
         }
     }
@@ -63,7 +63,7 @@ class HapticsManager: ObservableObject {
             let player = try engine?.makePlayer(with: pattern)
             try player?.start(atTime: CHHapticTimeImmediate)
         } catch {
-            print("Failed to play food haptic pattern: \(error.localizedDescription)")
+            print("🐍 Failed to play food haptic pattern: \(error.localizedDescription)")
             prepareHaptics() // Try to recover
         }
     }
@@ -78,7 +78,7 @@ class HapticsManager: ObservableObject {
             let player = try engine?.makePlayer(with: pattern)
             try player?.start(atTime: CHHapticTimeImmediate)
         } catch {
-            print("Failed to play game over haptic pattern: \(error.localizedDescription)")
+            print("🐍 Failed to play game over haptic pattern: \(error.localizedDescription)")
             prepareHaptics() // Try to recover
         }
     }
@@ -93,7 +93,7 @@ class HapticsManager: ObservableObject {
             let player = try engine?.makePlayer(with: pattern)
             try player?.start(atTime: CHHapticTimeImmediate)
         } catch {
-            print("Failed to play toggle haptic pattern: \(error.localizedDescription)")
+            print("🐍 Failed to play toggle haptic pattern: \(error.localizedDescription)")
             prepareHaptics() // Try to recover
         }
     }

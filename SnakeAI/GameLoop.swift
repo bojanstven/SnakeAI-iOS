@@ -25,14 +25,14 @@ class GameLoop: ObservableObject {
         displayLink = CADisplayLink(target: self, selector: #selector(frame))
         displayLink?.preferredFramesPerSecond = 60  // Keep this for smooth rendering
         displayLink?.add(to: .main, forMode: .common)
-        print("Game loop started")
+        print("🐍 Game loop started")
     }
     
     func stop() {
         displayLink?.invalidate()
         displayLink = nil
         accumulatedTime = 0
-        print("Game loop stopped")
+        print("🐍 Game loop stopped")
     }
     
     @objc private func frame() {

@@ -31,7 +31,7 @@ struct GameView: View {
     @State private var isGameOver = false
     @State private var lastDirection = Direction.right
     
-    @State private var wallsEnabled = false
+    @State private var wallsEnabled = true
     @State private var gamepadConnected = false
     @State private var autoplayEnabled = false
     @State private var settingsOpen = false
@@ -74,8 +74,8 @@ struct GameView: View {
         ]
         
         generateNewFoodPosition(maxX: layout.maxX, maxY: layout.maxY)
-        print("New game started! Grid size: \(layout.maxX)x\(layout.maxY)")
-        
+        print("🐍 New game started! Grid size: \(layout.maxX)x\(layout.maxY)")
+
         // Set up game loop
         gameLoop.frameCallback = { [self] in
             moveSnake(maxX: layout.maxX, maxY: layout.maxY)
@@ -136,7 +136,7 @@ struct GameView: View {
             score = score + 1
             hapticsManager.foodEatenHaptic()
             generateNewFoodPosition(maxX: maxX, maxY: maxY)
-            print("Snake grew! New length: \(snakePositions.count + 1)")
+            print("🐍 Snake grew! New length: \(snakePositions.count + 1)")
         } else {
             snakePositions.removeLast()
         }
@@ -155,7 +155,7 @@ struct GameView: View {
         gameLoop.stop()
         isGameOver = true
         hapticsManager.gameOverHaptic()
-        print("Game Over! Final Score: \(score)")
+        print("🐍 Game Over! Final Score: \(score)")
     }
     
     private func tryChangeDirection(_ newDirection: Direction) {
@@ -358,7 +358,7 @@ struct GameView: View {
                         Button(action: {
                             wallsEnabled.toggle()
                             hapticsManager.toggleHaptic()
-                            print("Walls \(wallsEnabled ? "enabled" : "disabled")")
+                            print("🐍 Walls \(wallsEnabled ? "enabled" : "disabled")")
                         }) {
                             HStack(spacing: 2) {
                                 Image(systemName: wallsEnabled ? "shield.lefthalf.filled.slash" : "shield.lefthalf.filled")
