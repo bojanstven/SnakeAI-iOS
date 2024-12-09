@@ -169,10 +169,10 @@ struct GameView: View {
             let layout = calculateLayout(for: geometry)
             let buttonSize = min(geometry.size.width * 0.15, 50.0)
             
-            ZStack {
-                Color(red: 0.65, green: 0.75, blue: 0.65)  // More greenish background
+            ZStack {  // MARK: - Root ZStack: Main container for background and entire game layout
+                Color(red: 0.65, green: 0.75, blue: 0.65)  // Main background color
                     .edgesIgnoringSafeArea(.all)
-                
+
                 VStack(spacing: 0) {
                     HStack(spacing: geometry.size.width * 0.02) {
                         Image(systemName: "crown.fill")
@@ -195,13 +195,38 @@ struct GameView: View {
                     .padding(.horizontal, geometry.size.width * 0.02)
                     .padding(.bottom, geometry.size.height * 0.007)
 
-                    ZStack {
-                        Rectangle()
-                            .fill(Color(red: 0.9, green: 1.0, blue: 0.9))
+                    ZStack {  // MARK: - Game Area ZStack: Contains game board, snake, food, and overlays
+                        // This is where we want to add the checkerboard pattern
                         
+                        // Base darker green
+                        Rectangle()
+                            .fill(Color(red: 0.60, green: 0.70, blue: 0.60))
+                        
+                        // Checkerboard pattern
+                        GeometryReader { proxy in
+                            let columns = Int(proxy.size.width / layout.squareSize)
+                            let rows = Int(proxy.size.height / layout.squareSize)
+                            
+                            ForEach(0..<rows, id: \.self) { row in
+                                ForEach(0..<columns, id: \.self) { column in
+                                    if (row + column).isMultiple(of: 2) {
+                                        Rectangle()
+                                            .fill(Color(red: 0.58, green: 0.68, blue: 0.58))  // Slightly darker shade
+                                            .frame(width: layout.squareSize, height: layout.squareSize)
+                                            .position(
+                                                x: CGFloat(column) * layout.squareSize + layout.squareSize/2,
+                                                y: CGFloat(row) * layout.squareSize + layout.squareSize/2
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Border
+
                         Rectangle()
                             .stroke(
-                                Color(red: 0.0, green: 0.5, blue: 0.0),
+                                Color(red: 0.0, green: 0.1, blue: 0.0),
                                 style: StrokeStyle(
                                     lineWidth: frameWidth,
                                     lineCap: .round,
@@ -354,7 +379,7 @@ struct GameView: View {
                             hapticsManager.toggleHaptic()
                         }) {
                             HStack(spacing: 2) {  // Minimal spacing between icon and text
-                                Image(systemName: "paperplane.fill")
+                                Image(systemName: "hands.and.sparkles.fill")
                                     .font(.title2)
                                 Text("Auto")
                                     .font(.system(size: 20, weight: .medium))
