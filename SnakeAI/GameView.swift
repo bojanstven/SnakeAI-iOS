@@ -263,6 +263,12 @@ struct GameView: View {
                             )
                         
                         if isGameOver {
+                            // Add blur overlay first
+                            Rectangle()
+                                .fill(Color.black.opacity(0.4))  // Semi-transparent black
+                                .blur(radius: 3)
+                                .ignoresSafeArea()
+                            
                             VStack(spacing: 20) {
                                 Text("You Died!")
                                     .font(.system(size: 40, weight: .bold))
@@ -284,12 +290,18 @@ struct GameView: View {
                         }
                         
                         if isPaused {
+                            // Add blur overlay first
+                            Rectangle()
+                                .fill(Color.black.opacity(0.4))  // Semi-transparent black
+                                .blur(radius: 3)
+                                .ignoresSafeArea()
+                            
                             VStack(spacing: 20) {
                                 Text("Game Paused")
                                     .font(.system(size: 40, weight: .bold))
-                                    .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
+                                    .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.2))  // Much lighter, more vibrant green
                                     .transition(.scale)
-                                
+
                                 Button(action: { togglePause(maxX: layout.maxX, maxY: layout.maxY) }) {
                                     Text("Resume")
                                         .font(.title2)
