@@ -23,6 +23,8 @@ struct GameView: View {
     @StateObject private var hapticsManager = HapticsManager()
     @StateObject private var scoreManager = ScoreManager()
     @StateObject private var gameLoop = GameLoop()
+    @StateObject private var snakeAI = SnakeAI(level: .basic)
+
     @State private var isPaused = false
     @State private var score = 0
     @State private var snakePositions = [Position(x: 0, y: 0)]
@@ -36,6 +38,8 @@ struct GameView: View {
     @State private var autoplayEnabled = false
     @State private var settingsOpen = false
     @State private var isInitialized = false
+    
+    @Environment(\.scenePhase) private var scenePhase
     
     private let moveInterval: TimeInterval = 0.2
     private let frameWidth: CGFloat = 1
@@ -94,6 +98,17 @@ struct GameView: View {
     
     private func moveSnake(maxX: Int, maxY: Int) {
         guard var newHead = snakePositions.first else { return }
+        
+        // Add AI control when autoplay is enabled
+        if autoplayEnabled {
+            direction = snakeAI.calculateNextMove(
+                snake: snakePositions,
+                food: foodPosition,
+                boardSize: (width: maxX, height: maxY),
+                wallsEnabled: !wallsEnabled  // Note: inverted because of your wall logic
+            )
+            print("🐍 AI chose direction: \(direction)")
+        }
         
         switch direction {
         case .up: newHead.y -= 1
@@ -389,6 +404,11 @@ struct GameView: View {
                         Button(action: {
                             autoplayEnabled.toggle()
                             hapticsManager.toggleHaptic()
+                            if autoplayEnabled {
+                                print("🐍 AI Control activated")
+                            } else {
+                                print("🐍 Manual Control restored")
+                            }
                         }) {
                             HStack(spacing: 2) {  // Minimal spacing between icon and text
                                 Image(systemName: "hands.and.sparkles.fill")
@@ -428,6 +448,28 @@ struct GameView: View {
                 if !isInitialized {
                     await scoreManager.fetchScores()
                     isInitialized = true
+                }
+            }
+            .onChange(of: scenePhase, initial: false) { oldPhase, newPhase in
+                switch newPhase {
+                case .active:
+                    print("🐍 App became active")
+                    // Don't auto-resume, let user decide
+                case .inactive:
+                    print("🐍 App became inactive")
+                    if !isPaused && !isGameOver {
+                        // Optional: Pause on partial hide when in manual mode
+                        if !autoplayEnabled {
+                            togglePause(maxX: layout.maxX, maxY: layout.maxY)
+                        }
+                    }
+                case .background:
+                    print("🐍 App entered background")
+                    if !isPaused && !isGameOver {
+                        togglePause(maxX: layout.maxX, maxY: layout.maxY)
+                    }
+                @unknown default:
+                    print("🐍 Unknown scene phase")
                 }
             }
         }
