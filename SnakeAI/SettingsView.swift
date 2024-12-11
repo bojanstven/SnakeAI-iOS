@@ -12,6 +12,9 @@ struct SettingsView: View {
     @State private var rotation: Double = -90
     @State private var previousPauseState: Bool
     
+    @Binding var isGameOver: Bool
+
+    
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2"
         return "Snake AI by Bojanstven - v\(version)"
@@ -28,28 +31,39 @@ struct SettingsView: View {
         }
     }
     
-    init(isOpen: Binding<Bool>, wallsOn: Binding<Bool>, autoplayEnabled: Binding<Bool>, snakeAI: SnakeAI, hapticsManager: HapticsManager, isPaused: Binding<Bool>, gameLoop: GameLoop) {
+    init(isOpen: Binding<Bool>,
+         wallsOn: Binding<Bool>,
+         autoplayEnabled: Binding<Bool>,
+         snakeAI: SnakeAI,
+         hapticsManager: HapticsManager,
+         isPaused: Binding<Bool>,
+         isGameOver: Binding<Bool>,  // Add this
+         gameLoop: GameLoop) {
         self._isOpen = isOpen
         self._wallsOn = wallsOn
         self._autoplayEnabled = autoplayEnabled
         self._isPaused = isPaused
+        self._isGameOver = isGameOver  // Add this
         self.snakeAI = snakeAI
         self.hapticsManager = hapticsManager
         self.gameLoop = gameLoop
         self._previousPauseState = State(initialValue: isPaused.wrappedValue)
     }
-    
+
     private func closeSettings() {
         withAnimation(.spring(duration: 0.8)) {
             self.rotation = -90
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 self.isOpen = false
-                gameLoop.start()
-                isPaused = false
+                // Only resume game if it wasn't game over
+                if !isGameOver {  // Need to add this as a property
+                    gameLoop.start()
+                    isPaused = false
+                }
             }
         }
     }
-    
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {

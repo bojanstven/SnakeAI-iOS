@@ -73,11 +73,15 @@ struct GameView: View {
     }
     
     private func startGame(with layout: (squareSize: CGFloat, gameHeight: CGFloat, maxX: Int, maxY: Int)) {
-        score = 0
+        // Clear states first
+        gameLoop.stop()
         isGameOver = false
+        isPaused = false
+        
+        // Then set up new game
+        score = 0
         direction = .right
         lastDirection = .right
-        isPaused = false
         
         let startX = layout.maxX / 2
         let startY = layout.maxY / 2
@@ -91,7 +95,7 @@ struct GameView: View {
         generateNewFoodPosition(maxX: layout.maxX, maxY: layout.maxY)
         print("🐍 New game started! Grid size: \(layout.maxX)x\(layout.maxY)")
 
-        // Set up game loop
+        // Start game loop last
         gameLoop.frameCallback = { [self] in
             moveSnake(maxX: layout.maxX, maxY: layout.maxY)
         }
@@ -311,7 +315,7 @@ struct GameView: View {
                             .animation(.easeInOut(duration: 0.5), value: isGameOver)
                         }
                         
-                        if isPaused {
+                        if isPaused && !isGameOver {  // Only show pause overlay if not game over
                             // Add blur overlay first
                             Rectangle()
                                 .fill(Color.black.opacity(0.4))  // Semi-transparent black
@@ -472,6 +476,7 @@ struct GameView: View {
                         snakeAI: snakeAI,
                         hapticsManager: hapticsManager,
                         isPaused: $isPaused,
+                        isGameOver: $isGameOver,
                         gameLoop: gameLoop
                     )
                 }
