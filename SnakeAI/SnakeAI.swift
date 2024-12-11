@@ -10,7 +10,7 @@ protocol SnakeAIStrategy {
     func nextMove(snake: [Position],
                  food: Position,
                  boardSize: (width: Int, height: Int),
-                 wallsEnabled: Bool) -> Direction
+                  wallsOn: Bool) -> Direction
 }
 
 class SnakeAI: ObservableObject {
@@ -34,11 +34,11 @@ class SnakeAI: ObservableObject {
     func calculateNextMove(snake: [Position],
                          food: Position,
                          boardSize: (width: Int, height: Int),
-                         wallsEnabled: Bool) -> Direction {
+                           wallsOn: Bool) -> Direction {
         lastDecision = strategy.nextMove(snake: snake,
                                        food: food,
                                        boardSize: boardSize,
-                                       wallsEnabled: wallsEnabled)
+                                         wallsOn: wallsOn)
         return lastDecision
     }
     
@@ -57,12 +57,12 @@ class SnakeAI: ObservableObject {
 }
 
 class BasicSnakeStrategy: SnakeAIStrategy {
-    func nextMove(snake: [Position], food: Position, boardSize: (width: Int, height: Int), wallsEnabled: Bool) -> Direction {
+    func nextMove(snake: [Position], food: Position, boardSize: (width: Int, height: Int), wallsOn: Bool) -> Direction {
         let head = snake[0]
         
         // Calculate distances considering wall wrapping if enabled
-        let xDistance = getShortestDistance(from: head.x, to: food.x, boardSize: boardSize.width, wallsEnabled: wallsEnabled)
-        let yDistance = getShortestDistance(from: head.y, to: food.y, boardSize: boardSize.height, wallsEnabled: wallsEnabled)
+        let xDistance = getShortestDistance(from: head.x, to: food.x, boardSize: boardSize.width, wallsOn: wallsOn)
+        let yDistance = getShortestDistance(from: head.y, to: food.y, boardSize: boardSize.height, wallsOn: wallsOn)
         
         // Determine if next move would cause self-collision
         func wouldCollide(_ nextPos: Position) -> Bool {
@@ -72,12 +72,12 @@ class BasicSnakeStrategy: SnakeAIStrategy {
         // Try horizontal movement first if it's the longer distance
         if abs(xDistance) >= abs(yDistance) {
             if xDistance > 0 {
-                let nextPos = getNextPosition(head, direction: .right, boardSize: boardSize, wallsEnabled: wallsEnabled)
+                let nextPos = getNextPosition(head, direction: .right, boardSize: boardSize, wallsOn: wallsOn)
                 if !wouldCollide(nextPos) {
                     return .right
                 }
             } else if xDistance < 0 {
-                let nextPos = getNextPosition(head, direction: .left, boardSize: boardSize, wallsEnabled: wallsEnabled)
+                let nextPos = getNextPosition(head, direction: .left, boardSize: boardSize, wallsOn: wallsOn)
                 if !wouldCollide(nextPos) {
                     return .left
                 }
@@ -85,12 +85,12 @@ class BasicSnakeStrategy: SnakeAIStrategy {
             
             // If horizontal movement would cause collision, try vertical
             if yDistance > 0 {
-                let nextPos = getNextPosition(head, direction: .down, boardSize: boardSize, wallsEnabled: wallsEnabled)
+                let nextPos = getNextPosition(head, direction: .down, boardSize: boardSize, wallsOn: wallsOn)
                 if !wouldCollide(nextPos) {
                     return .down
                 }
             } else {
-                let nextPos = getNextPosition(head, direction: .up, boardSize: boardSize, wallsEnabled: wallsEnabled)
+                let nextPos = getNextPosition(head, direction: .up, boardSize: boardSize, wallsOn: wallsOn)
                 if !wouldCollide(nextPos) {
                     return .up
                 }
@@ -99,12 +99,12 @@ class BasicSnakeStrategy: SnakeAIStrategy {
         // Try vertical movement first if it's the longer distance
         else {
             if yDistance > 0 {
-                let nextPos = getNextPosition(head, direction: .down, boardSize: boardSize, wallsEnabled: wallsEnabled)
+                let nextPos = getNextPosition(head, direction: .down, boardSize: boardSize, wallsOn: wallsOn)
                 if !wouldCollide(nextPos) {
                     return .down
                 }
             } else if yDistance < 0 {
-                let nextPos = getNextPosition(head, direction: .up, boardSize: boardSize, wallsEnabled: wallsEnabled)
+                let nextPos = getNextPosition(head, direction: .up, boardSize: boardSize, wallsOn: wallsOn)
                 if !wouldCollide(nextPos) {
                     return .up
                 }
@@ -112,12 +112,12 @@ class BasicSnakeStrategy: SnakeAIStrategy {
             
             // If vertical movement would cause collision, try horizontal
             if xDistance > 0 {
-                let nextPos = getNextPosition(head, direction: .right, boardSize: boardSize, wallsEnabled: wallsEnabled)
+                let nextPos = getNextPosition(head, direction: .right, boardSize: boardSize, wallsOn: wallsOn)
                 if !wouldCollide(nextPos) {
                     return .right
                 }
             } else {
-                let nextPos = getNextPosition(head, direction: .left, boardSize: boardSize, wallsEnabled: wallsEnabled)
+                let nextPos = getNextPosition(head, direction: .left, boardSize: boardSize, wallsOn: wallsOn)
                 if !wouldCollide(nextPos) {
                     return .left
                 }
@@ -126,7 +126,7 @@ class BasicSnakeStrategy: SnakeAIStrategy {
         
         // If all direct paths would cause collision, try any safe direction
         for direction in [Direction.up, .right, .down, .left] {
-            let nextPos = getNextPosition(head, direction: direction, boardSize: boardSize, wallsEnabled: wallsEnabled)
+            let nextPos = getNextPosition(head, direction: direction, boardSize: boardSize, wallsOn: wallsOn)
             if !wouldCollide(nextPos) {
                 return direction
             }
@@ -135,8 +135,8 @@ class BasicSnakeStrategy: SnakeAIStrategy {
         return .right // Last resort
     }
     
-    private func getShortestDistance(from start: Int, to end: Int, boardSize: Int, wallsEnabled: Bool) -> Int {
-        if wallsEnabled {
+    private func getShortestDistance(from start: Int, to end: Int, boardSize: Int, wallsOn: Bool) -> Int {
+        if wallsOn {
             return end - start
         }
         
@@ -150,7 +150,7 @@ class BasicSnakeStrategy: SnakeAIStrategy {
         return abs(direct) < abs(wrapAround) ? direct : wrapAround
     }
     
-    private func getNextPosition(_ current: Position, direction: Direction, boardSize: (width: Int, height: Int), wallsEnabled: Bool) -> Position {
+    private func getNextPosition(_ current: Position, direction: Direction, boardSize: (width: Int, height: Int), wallsOn: Bool) -> Position {
         var next = current
         
         switch direction {
@@ -166,7 +166,7 @@ class BasicSnakeStrategy: SnakeAIStrategy {
             break
         }
         
-        if !wallsEnabled {
+        if !wallsOn {
             // Wrap around if needed
             if next.x < 0 { next.x = boardSize.width - 1 }
             if next.x >= boardSize.width { next.x = 0 }
@@ -180,13 +180,13 @@ class BasicSnakeStrategy: SnakeAIStrategy {
 
 // Placeholder classes for now
 class SmartSnakeStrategy: SnakeAIStrategy {
-    func nextMove(snake: [Position], food: Position, boardSize: (width: Int, height: Int), wallsEnabled: Bool) -> Direction {
+    func nextMove(snake: [Position], food: Position, boardSize: (width: Int, height: Int), wallsOn: Bool) -> Direction {
         return .right
     }
 }
 
 class GeniusSnakeStrategy: SnakeAIStrategy {
-    func nextMove(snake: [Position], food: Position, boardSize: (width: Int, height: Int), wallsEnabled: Bool) -> Direction {
+    func nextMove(snake: [Position], food: Position, boardSize: (width: Int, height: Int), wallsOn: Bool) -> Direction {
         return .right
     }
 }

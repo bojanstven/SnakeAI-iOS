@@ -33,7 +33,7 @@ struct GameView: View {
     @State private var isGameOver = false
     @State private var lastDirection = Direction.right
     
-    @State private var wallsEnabled = true
+    @State private var wallsOn = false
     @State private var gamepadConnected = false
     @State private var autoplayEnabled = false
     @State private var settingsOpen = false
@@ -43,6 +43,17 @@ struct GameView: View {
     
     private let moveInterval: TimeInterval = 0.2
     private let frameWidth: CGFloat = 1
+    
+    private var borderStyle: StrokeStyle {
+        StrokeStyle(
+            lineWidth: frameWidth,
+            lineCap: .round,
+            lineJoin: .round,
+            dash: wallsOn ? [] : [2, 5],
+            dashPhase: 0
+        )
+    }
+
     
     private func calculateLayout(for geometry: GeometryProxy) -> (squareSize: CGFloat, gameHeight: CGFloat, maxX: Int, maxY: Int) {
         let sideMargin = geometry.size.width * 0.02
@@ -105,9 +116,8 @@ struct GameView: View {
                 snake: snakePositions,
                 food: foodPosition,
                 boardSize: (width: maxX, height: maxY),
-                wallsEnabled: !wallsEnabled  // Note: inverted because of your wall logic
+                wallsOn: wallsOn  // Updated parameter name
             )
-            print("🐍 AI chose direction: \(direction)")
         }
         
         switch direction {
@@ -120,10 +130,7 @@ struct GameView: View {
         
         // For moveSnake function
         if newHead.x < 0 || newHead.x >= maxX || newHead.y < 0 || newHead.y >= maxY {
-            if !wallsEnabled {  // When walls button is OFF (black), die
-                endGame()
-                return
-            } else {  // When walls button is ON (white), teleport
+            if !wallsOn {  // When walls off (false), snake can go through
                 // Wrap around logic
                 if newHead.x < 0 {
                     newHead.x = maxX - 1
@@ -135,8 +142,12 @@ struct GameView: View {
                 } else if newHead.y >= maxY {
                     newHead.y = 0
                 }
+            } else {  // When walls on (true), die on collision
+                endGame()
+                return
             }
         }
+
         // Check self collision
         if snakePositions.contains(newHead) {
             endGame()
@@ -151,7 +162,7 @@ struct GameView: View {
             score = score + 1
             hapticsManager.foodEatenHaptic()
             generateNewFoodPosition(maxX: maxX, maxY: maxY)
-            print("🐍 Snake grew! New length: \(snakePositions.count + 1)")
+            print("🐍 Food eaten: \(score + 1), Total length: \(snakePositions.count + 1)")
         } else {
             snakePositions.removeLast()
         }
@@ -190,20 +201,21 @@ struct GameView: View {
 
                 VStack(spacing: 0) {
                     HStack(spacing: geometry.size.width * 0.02) {
+                        // High Score (on the left)
                         Image(systemName: "crown.fill")
                             .font(.title)
                             .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
                         
-                        Text("Score: \(score)")
+                        Text("\(scoreManager.highScore)")
                             .font(.title)
                             .bold()
                             .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
                         
                         Spacer()
                         
-                        Text("Best: \(scoreManager.highScore)")
-                            .font(.title)
-                            .bold()
+                        // Current Score (on the right)
+                        Text("\(score)")
+                            .font(.title2) // Slightly smaller
                             .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
                     }
                     .frame(height: geometry.size.height * 0.03)
@@ -242,14 +254,9 @@ struct GameView: View {
                         Rectangle()
                             .stroke(
                                 Color(red: 0.0, green: 0.1, blue: 0.0),
-                                style: StrokeStyle(
-                                    lineWidth: frameWidth,
-                                    lineCap: .round,
-                                    lineJoin: .round,
-                                    dash: wallsEnabled ? [2, 5] : [],  // Dotted when walls button is ON (white), solid when OFF (black)
-                                    dashPhase: 0
-                                )
+                                style: borderStyle
                             )
+                        
                         ForEach(0..<snakePositions.count, id: \.self) { index in
                             Rectangle()
                                 .fill(index == 0
@@ -330,12 +337,15 @@ struct GameView: View {
                             .transition(.opacity)
                             .animation(.easeInOut(duration: 0.5), value: isPaused)
                         }
+                        
+                        
                     }
                     .frame(
                         width: geometry.size.width - (geometry.size.width * 0.02 * 2),
                         height: geometry.size.height - (geometry.size.height * 0.13)
                     )
                     .padding(.horizontal, geometry.size.width * 0.02)
+                    
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 20)
                             .onEnded { gesture in
@@ -358,25 +368,28 @@ struct GameView: View {
                             }
                     )
 
-                    .gesture(
-                        SpatialTapGesture(count: 1)
-                            .simultaneously(with: SpatialTapGesture(count: 1))
+
+
+                    .gesture(  // Change this to regular gesture instead of SpatialTapGesture
+                        TapGesture()
                             .onEnded { _ in
-                                if !isGameOver {
+                                if !isGameOver && !settingsOpen {  // Add settingsOpen check
                                     togglePause(maxX: layout.maxX, maxY: layout.maxY)
                                 }
                             }
                     )
-                    
+
                     HStack(spacing: geometry.size.width * 0.02) {  // Reduced spacing between buttons
                         // Walls toggle
                         Button(action: {
-                            wallsEnabled.toggle()
-                            hapticsManager.toggleHaptic()
-                            print("🐍 Walls \(wallsEnabled ? "enabled" : "disabled")")
+                            hapticsManager.toggleHaptic() // Do haptic first
+                            DispatchQueue.main.async {
+                                wallsOn.toggle()
+                                print("🐍 Walls \(wallsOn ? "On" : "Off")")
+                            }
                         }) {
                             HStack(spacing: 2) {
-                                Image(systemName: wallsEnabled ? "shield.lefthalf.filled.slash" : "shield.lefthalf.filled")
+                                Image(systemName: !wallsOn ? "shield.lefthalf.filled.slash" : "shield.lefthalf.filled")
                                     .font(.title2)
                                 Text("Walls")
                                     .font(.system(size: 20, weight: .medium))
@@ -385,10 +398,10 @@ struct GameView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: buttonSize)
                             .background(Color(red: 0.0, green: 0.5, blue: 0.0))
-                            .foregroundColor(wallsEnabled ? .white : .black)  // Now black by default, white when enabled
+                            .foregroundColor(!wallsOn ? .white : .black)  // White when walls are off (pass through)
                             .cornerRadius(8)
                         }
-
+                        
                         // Gamepad status - icon only
                         Button(action: {}) {
                             Image(systemName: "gamecontroller.fill")
@@ -428,6 +441,15 @@ struct GameView: View {
                         Button(action: {
                             settingsOpen.toggle()
                             hapticsManager.toggleHaptic()
+                            if settingsOpen {
+                                // Store current state and pause
+                                gameLoop.stop()
+                                isPaused = true
+                            } else {
+                                // Resume game
+                                gameLoop.start()
+                                isPaused = false
+                            }
                         }) {
                             Image(systemName: "gearshape.fill")
                                 .font(.title2)
@@ -436,10 +458,24 @@ struct GameView: View {
                                 .foregroundColor(settingsOpen ? .white : .black)
                                 .cornerRadius(8)
                         }
+
                     }
                     .padding(.horizontal, geometry.size.width * 0.02)  // Minimal padding at edges
                     .padding(.vertical, geometry.size.height * 0.01)   // Minimal vertical padding
                 }
+                
+                if settingsOpen {
+                    SettingsView(
+                        isOpen: $settingsOpen,
+                        wallsOn: $wallsOn,
+                        autoplayEnabled: $autoplayEnabled,
+                        snakeAI: snakeAI,
+                        hapticsManager: hapticsManager,
+                        isPaused: $isPaused,
+                        gameLoop: gameLoop
+                    )
+                }
+
             }
             .onAppear {
                 startGame(with: layout)

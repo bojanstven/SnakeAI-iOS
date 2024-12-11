@@ -1,11 +1,3 @@
-//
-//  GameLoop.swift
-//  SnakeAI
-//
-//  Created by Bojan Mijic on 09.12.2024.
-//
-
-
 import Foundation
 import QuartzCore
 
