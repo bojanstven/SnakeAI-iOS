@@ -1,8 +1,14 @@
 import SwiftUI
 
-struct Position: Equatable {
+struct Position: Equatable, Hashable {  // Add Hashable here
     var x: Int
     var y: Int
+    
+    // Add hash function
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(x)
+        hasher.combine(y)
+    }
 }
 
 enum Direction {
@@ -38,6 +44,9 @@ struct GameView: View {
     @State private var autoplayEnabled = false
     @State private var settingsOpen = false
     @State private var isInitialized = false
+    
+    @State private var gameSpeed: Int = 2  // Default middle speed
+
     
     @Environment(\.scenePhase) private var scenePhase
     
@@ -102,6 +111,12 @@ struct GameView: View {
         gameLoop.start()
     }
     
+    
+    private func forceImmediateMove(maxX: Int, maxY: Int) {
+        moveSnake(maxX: maxX, maxY: maxY)
+        print("🐍 Forced immediate move in direction: \(direction)")
+    }
+
     private func generateNewFoodPosition(maxX: Int, maxY: Int) {
         repeat {
             foodPosition = Position(
@@ -353,27 +368,41 @@ struct GameView: View {
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 20)
                             .onEnded { gesture in
-                                if !isPaused && !isGameOver {
+                                print("🐍 Swipe detected!")
+                                if !isPaused && !isGameOver && !autoplayEnabled {
                                     let horizontalAmount = gesture.translation.width
                                     let verticalAmount = gesture.translation.height
                                     
+                                    print("🐍 Swipe amounts - H: \(horizontalAmount), V: \(verticalAmount)")
+                                    print("🐍 Current direction: \(direction)")
+                                    
                                     if abs(horizontalAmount) > abs(verticalAmount) {
                                         let newDirection = horizontalAmount > 0 ? Direction.right : Direction.left
-                                        if newDirection != direction.opposite && newDirection != lastDirection.opposite {
+                                        print("🐍 New horizontal direction: \(newDirection)")
+                                        
+                                        if newDirection == direction {
+                                            print("🐍 Same direction swipe!")
+                                            moveSnake(maxX: layout.maxX, maxY: layout.maxY)
+                                        } else if newDirection != direction.opposite && newDirection != lastDirection.opposite {
                                             direction = newDirection
                                         }
                                     } else {
                                         let newDirection = verticalAmount > 0 ? Direction.down : Direction.up
-                                        if newDirection != direction.opposite && newDirection != lastDirection.opposite {
+                                        print("🐍 New vertical direction: \(newDirection)")
+                                        
+                                        if newDirection == direction {
+                                            print("🐍 Same direction swipe!")
+                                            moveSnake(maxX: layout.maxX, maxY: layout.maxY)
+                                        } else if newDirection != direction.opposite && newDirection != lastDirection.opposite {
                                             direction = newDirection
                                         }
                                     }
+                                } else {
+                                    print("🐍 Game state prevented move - Paused: \(isPaused), GameOver: \(isGameOver), Autoplay: \(autoplayEnabled)")
                                 }
                             }
                     )
-
-
-
+                    
                     .gesture(  // Change this to regular gesture instead of SpatialTapGesture
                         TapGesture()
                             .onEnded { _ in
@@ -477,7 +506,8 @@ struct GameView: View {
                         hapticsManager: hapticsManager,
                         isPaused: $isPaused,
                         isGameOver: $isGameOver,
-                        gameLoop: gameLoop
+                        gameLoop: gameLoop,
+                        gameSpeed: $gameSpeed
                     )
                 }
 

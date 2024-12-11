@@ -5,10 +5,19 @@ class GameLoop: ObservableObject {
     private var displayLink: CADisplayLink?
     private var lastUpdateTime: CFTimeInterval = 0
     private var accumulatedTime: CFTimeInterval = 0
-    private let updateInterval: CFTimeInterval = 0.2  // Match your original moveInterval
     private let maxAccumulatedTime: CFTimeInterval = 0.4  // Prevent spiral of death
     
     var frameCallback: (() -> Void)?
+    
+    var updateInterval: TimeInterval = 0.2 {
+        didSet {
+            // Restart the loop with new interval if it was running
+            if displayLink != nil {
+                stop()
+                start()
+            }
+        }
+    }
     
     init() {}
     
