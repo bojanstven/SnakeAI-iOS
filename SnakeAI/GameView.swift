@@ -457,7 +457,7 @@ struct GameView: View {
                             }
                         }) {
                             HStack(spacing: 2) {  // Minimal spacing between icon and text
-                                Image(systemName: "hands.and.sparkles.fill")
+                                Image(systemName: "brain.filled.head.profile")
                                     .font(.title2)
                                 Text("Auto")
                                     .font(.system(size: 20, weight: .medium))

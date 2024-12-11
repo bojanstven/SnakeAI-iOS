@@ -184,7 +184,7 @@ struct SettingsView: View {
     private func autoplayToggle() -> some View {
         Toggle(isOn: $autoplayEnabled) {
             HStack {
-                Image(systemName: "hands.and.sparkles.fill")
+                Image(systemName: "brain.filled.head.profile")
                 Text("AI Autoplay")
                     .font(.headline)
             }
