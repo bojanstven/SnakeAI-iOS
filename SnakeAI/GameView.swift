@@ -109,6 +109,8 @@ struct GameView: View {
             moveSnake(maxX: layout.maxX, maxY: layout.maxY)
         }
         gameLoop.start()
+        scoreManager.startNewGame(isAIEnabled: autoplayEnabled)
+
     }
     
     
@@ -200,6 +202,7 @@ struct GameView: View {
         gameLoop.stop()
         isGameOver = true
         hapticsManager.gameOverHaptic()
+        scoreManager.endGame()
         print("🐍 Game Over! Final Score: \(score)")
     }
     
@@ -507,7 +510,8 @@ struct GameView: View {
                         isPaused: $isPaused,
                         isGameOver: $isGameOver,
                         gameLoop: gameLoop,
-                        gameSpeed: $gameSpeed
+                        gameSpeed: $gameSpeed,
+                        scoreManager: scoreManager
                     )
                 }
 

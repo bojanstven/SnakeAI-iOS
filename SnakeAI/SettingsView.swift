@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var speedLevel: Int = 1
     @State private var rotation: Double = -90
     @State private var previousPauseState: Bool
+    @ObservedObject var scoreManager: ScoreManager
     
     @Binding var isGameOver: Bool
     @Binding var gameSpeed: Int
@@ -39,7 +40,8 @@ struct SettingsView: View {
          isPaused: Binding<Bool>,
          isGameOver: Binding<Bool>,
          gameLoop: GameLoop,
-         gameSpeed: Binding<Int>) {
+         gameSpeed: Binding<Int>,
+         scoreManager: ScoreManager) {
         self._isOpen = isOpen
         self._wallsOn = wallsOn
         self._autoplayEnabled = autoplayEnabled
@@ -50,6 +52,7 @@ struct SettingsView: View {
         self.gameLoop = gameLoop
         self._gameSpeed = gameSpeed
         self._previousPauseState = State(initialValue: isPaused.wrappedValue)
+        self.scoreManager = scoreManager
     }
 
     private func closeSettings() {
@@ -86,6 +89,7 @@ struct SettingsView: View {
                                 headerView(geometry: geometry)
                                 speedView()
                                 Divider()
+                                StatsView(scoreManager: scoreManager)
                                 wallsToggle()
                                 autoplayToggle()
                                 aiLevelView()

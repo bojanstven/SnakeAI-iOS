@@ -1,7 +1,10 @@
 import Foundation
 import CloudKit
 
-struct Score: Codable {
+struct GameStats: Codable {
+    var totalGamesPlayed: Int
+    var aiGamesPlayed: Int
+    var totalPlaytime: TimeInterval
     var currentScore: Int
     var highScore: Int
 }
@@ -11,18 +14,45 @@ class ScoreManager: ObservableObject {
     @Published var currentScore: Int = 0
     @Published var highScore: Int = 0
     @Published var isLoading = false
+    @Published var stats: GameStats = GameStats(
+        totalGamesPlayed: 0,
+        aiGamesPlayed: 0,
+        totalPlaytime: 0,
+        currentScore: 0,
+        highScore: 0
+    )
     
     private let container = CKContainer(identifier: "iCloud.com.Bojanstven.SnakeAI")
     private let recordType = "SnakeScore"
+    private let statsRecordType = "SnakeStats"
     private var recordID: CKRecord.ID?
+    private var statsRecordID: CKRecord.ID?
+    private var gameStartTime: Date?
     
     init() {
         // Empty init, no fetching here
     }
     
+    func startNewGame(isAIEnabled: Bool) {
+        gameStartTime = Date()
+        stats.totalGamesPlayed += 1
+        if isAIEnabled {
+            stats.aiGamesPlayed += 1
+        }
+        saveStats()
+    }
+    
+    func endGame() {
+        if let startTime = gameStartTime {
+            stats.totalPlaytime += Date().timeIntervalSince(startTime)
+            gameStartTime = nil
+            saveStats()
+        }
+    }
+    
     func fetchScores() async {
         isLoading = true
-        print("🐍 Starting to fetch scores from CloudKit...")
+        print("🐍 Starting to fetch scores and stats from CloudKit...")
         
         let privateDB = container.privateCloudDatabase
         let highScoreSort = NSSortDescriptor(key: "highScore", ascending: false)
@@ -36,9 +66,22 @@ class ScoreManager: ObservableObject {
                 self.highScore = record["highScore"] as? Int ?? 0
                 print("🐍 Successfully fetched high score: \(self.highScore)")
             } else {
-                // No records found, create initial record
                 await self.saveHighScore()
                 print("🐍 No records found, created initial record")
+            }
+            
+            // Fetch stats
+            let statsQuery = CKQuery(recordType: statsRecordType, predicate: NSPredicate(value: true))
+            let statsResult = try await privateDB.records(matching: statsQuery, resultsLimit: 1)
+            if let statsRecord = try? statsResult.matchResults.first?.1.get() {
+                self.statsRecordID = statsRecord.recordID
+                self.stats.totalGamesPlayed = statsRecord["totalGamesPlayed"] as? Int ?? 0
+                self.stats.aiGamesPlayed = statsRecord["aiGamesPlayed"] as? Int ?? 0
+                self.stats.totalPlaytime = statsRecord["totalPlaytime"] as? TimeInterval ?? 0
+                print("🐍 Successfully fetched stats")
+            } else {
+                await self.saveStats()
+                print("🐍 No stats found, created initial stats record")
             }
         } catch {
             print("🐍 Error fetching from CloudKit: \(error.localizedDescription)")
@@ -49,12 +92,46 @@ class ScoreManager: ObservableObject {
     
     func updateScores(newScore: Int) {
         currentScore = newScore
+        stats.currentScore = newScore
         if newScore > highScore {
             highScore = newScore
+            stats.highScore = newScore
             Task {
                 await saveHighScore()
             }
         }
+    }
+    
+    private func saveStats() {
+        Task {
+            let privateDB = container.privateCloudDatabase
+            
+            do {
+                if let existingRecordID = statsRecordID {
+                    if let record = try? await privateDB.record(for: existingRecordID) {
+                        updateStatsRecord(record)
+                        let savedRecord = try await privateDB.save(record)
+                        self.statsRecordID = savedRecord.recordID
+                        print("🐍 Successfully updated stats")
+                        return
+                    }
+                }
+                
+                let newRecord = CKRecord(recordType: statsRecordType)
+                updateStatsRecord(newRecord)
+                let savedRecord = try await privateDB.save(newRecord)
+                self.statsRecordID = savedRecord.recordID
+                print("🐍 Successfully created new stats record")
+            } catch {
+                print("🐍 Error saving stats to CloudKit: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func updateStatsRecord(_ record: CKRecord) {
+        record["totalGamesPlayed"] = stats.totalGamesPlayed as CKRecordValue
+        record["aiGamesPlayed"] = stats.aiGamesPlayed as CKRecordValue
+        record["totalPlaytime"] = stats.totalPlaytime as CKRecordValue
     }
     
     private func saveHighScore() async {
@@ -62,7 +139,6 @@ class ScoreManager: ObservableObject {
         
         do {
             if let existingRecordID = recordID {
-                // Try to fetch existing record
                 if let record = try? await privateDB.record(for: existingRecordID) {
                     record["highScore"] = highScore as CKRecordValue
                     let savedRecord = try await privateDB.save(record)
@@ -72,13 +148,11 @@ class ScoreManager: ObservableObject {
                 }
             }
             
-            // Create new record if no existing record or fetch failed
             let newRecord = CKRecord(recordType: recordType)
             newRecord["highScore"] = highScore as CKRecordValue
             let savedRecord = try await privateDB.save(newRecord)
             self.recordID = savedRecord.recordID
             print("🐍 Successfully created new high score record: \(highScore)")
-
         } catch {
             print("🐍 Error saving to CloudKit: \(error.localizedDescription)")
         }
