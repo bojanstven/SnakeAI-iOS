@@ -29,6 +29,8 @@ struct GameView: View {
     @StateObject private var scoreManager = ScoreManager()
     @StateObject private var gameLoop = GameLoop()
     @StateObject private var snakeAI = SnakeAI(level: .basic)
+    @StateObject private var soundManager = SoundManager()
+
 
     @State private var isPaused = false
     @State private var score = 0
@@ -176,6 +178,7 @@ struct GameView: View {
             hapticsManager.foodEatenHaptic()
             
             if newScore > scoreManager.highScore {
+                soundManager.playGameOver()
                 showSparkles = true
                 sparkleOpacity = 1
                 withAnimation(.easeOut(duration: 1.5)) {
@@ -184,8 +187,10 @@ struct GameView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     showSparkles = false
                 }
+            } else {
+                soundManager.playEatFood()
             }
-            
+
             generateNewFoodPosition(maxX: maxX, maxY: maxY)
             print("🐍 Food eaten: \(newScore), Total length: \(snakePositions.count + 1)")
         } else {
@@ -197,8 +202,10 @@ struct GameView: View {
         isPaused = !isPaused
         if isPaused {
             gameLoop.stop()
+            soundManager.playGamePause()
         } else {
             gameLoop.start()
+            soundManager.playGameUnpause()
         }
     }
     
@@ -206,10 +213,11 @@ struct GameView: View {
         gameLoop.stop()
         isGameOver = true
         hapticsManager.gameOverHaptic()
+        soundManager.playGameOver()
         scoreManager.endGame()
         print("🐍 Game Over! Final Score: \(score)")
     }
-    
+
     private func tryChangeDirection(_ newDirection: Direction) {
         if newDirection != direction.opposite && newDirection != lastDirection.opposite {
             direction = newDirection
@@ -416,9 +424,14 @@ struct GameView: View {
                     HStack(spacing: geometry.size.width * 0.02) {  // Reduced spacing between buttons
                         // Walls toggle
                         Button(action: {
-                            hapticsManager.toggleHaptic() // Do haptic first
+                            hapticsManager.toggleHaptic()
                             DispatchQueue.main.async {
                                 wallsOn.toggle()
+                                if wallsOn {
+                                    soundManager.playWallSwitchOn()
+                                } else {
+                                    soundManager.playWallSwitchOff()
+                                }
                                 print("🐍 Walls \(wallsOn ? "On" : "Off")")
                             }
                         }) {
@@ -452,8 +465,10 @@ struct GameView: View {
                             autoplayEnabled.toggle()
                             hapticsManager.toggleHaptic()
                             if autoplayEnabled {
+                                soundManager.playAutoplayOn()
                                 print("🐍 AI Control activated")
                             } else {
+                                soundManager.playAutoplayOff()
                                 print("🐍 Manual Control restored")
                             }
                         }) {
