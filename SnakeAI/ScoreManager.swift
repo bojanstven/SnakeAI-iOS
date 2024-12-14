@@ -91,9 +91,11 @@ class ScoreManager: ObservableObject {
     }
     
     func updateScores(newScore: Int) {
+        print("🐍 ScoreManager updating scores: current=\(currentScore), new=\(newScore), high=\(highScore)")
         currentScore = newScore
         stats.currentScore = newScore
         if newScore > highScore {
+            print("🐍 New high score achieved!")
             highScore = newScore
             stats.highScore = newScore
             Task {
@@ -101,7 +103,7 @@ class ScoreManager: ObservableObject {
             }
         }
     }
-    
+
     private func saveStats() {
         Task {
             let privateDB = container.privateCloudDatabase

@@ -1,10 +1,9 @@
 import SwiftUI
 
-struct Position: Equatable, Hashable {  // Add Hashable here
+struct Position: Equatable, Hashable {
     var x: Int
     var y: Int
     
-    // Add hash function
     func hash(into hasher: inout Hasher) {
         hasher.combine(x)
         hasher.combine(y)
@@ -45,8 +44,10 @@ struct GameView: View {
     @State private var settingsOpen = false
     @State private var isInitialized = false
     
+    @State private var showSparkles = false
+    @State private var sparkleOpacity: CGFloat = 0
+    
     @State private var gameSpeed: Int = 2  // Default middle speed
-
     
     @Environment(\.scenePhase) private var scenePhase
     
@@ -62,7 +63,6 @@ struct GameView: View {
             dashPhase: 0
         )
     }
-
     
     private func calculateLayout(for geometry: GeometryProxy) -> (squareSize: CGFloat, gameHeight: CGFloat, maxX: Int, maxY: Int) {
         let sideMargin = geometry.size.width * 0.02
@@ -82,12 +82,10 @@ struct GameView: View {
     }
     
     private func startGame(with layout: (squareSize: CGFloat, gameHeight: CGFloat, maxX: Int, maxY: Int)) {
-        // Clear states first
         gameLoop.stop()
         isGameOver = false
         isPaused = false
         
-        // Then set up new game
         score = 0
         direction = .right
         lastDirection = .right
@@ -104,21 +102,18 @@ struct GameView: View {
         generateNewFoodPosition(maxX: layout.maxX, maxY: layout.maxY)
         print("🐍 New game started! Grid size: \(layout.maxX)x\(layout.maxY)")
 
-        // Start game loop last
         gameLoop.frameCallback = { [self] in
             moveSnake(maxX: layout.maxX, maxY: layout.maxY)
         }
         gameLoop.start()
         scoreManager.startNewGame(isAIEnabled: autoplayEnabled)
-
     }
-    
     
     private func forceImmediateMove(maxX: Int, maxY: Int) {
         moveSnake(maxX: maxX, maxY: maxY)
         print("🐍 Forced immediate move in direction: \(direction)")
     }
-
+    
     private func generateNewFoodPosition(maxX: Int, maxY: Int) {
         repeat {
             foodPosition = Position(
@@ -131,13 +126,12 @@ struct GameView: View {
     private func moveSnake(maxX: Int, maxY: Int) {
         guard var newHead = snakePositions.first else { return }
         
-        // Add AI control when autoplay is enabled
         if autoplayEnabled {
             direction = snakeAI.calculateNextMove(
                 snake: snakePositions,
                 food: foodPosition,
                 boardSize: (width: maxX, height: maxY),
-                wallsOn: wallsOn  // Updated parameter name
+                wallsOn: wallsOn
             )
         }
         
@@ -149,10 +143,8 @@ struct GameView: View {
         case .none: return
         }
         
-        // For moveSnake function
         if newHead.x < 0 || newHead.x >= maxX || newHead.y < 0 || newHead.y >= maxY {
-            if !wallsOn {  // When walls off (false), snake can go through
-                // Wrap around logic
+            if !wallsOn {
                 if newHead.x < 0 {
                     newHead.x = maxX - 1
                 } else if newHead.x >= maxX {
@@ -163,13 +155,12 @@ struct GameView: View {
                 } else if newHead.y >= maxY {
                     newHead.y = 0
                 }
-            } else {  // When walls on (true), die on collision
+            } else {
                 endGame()
                 return
             }
         }
 
-        // Check self collision
         if snakePositions.contains(newHead) {
             endGame()
             return
@@ -179,11 +170,24 @@ struct GameView: View {
         lastDirection = direction
         
         if newHead == foodPosition {
-            scoreManager.updateScores(newScore: score + 1)
-            score = score + 1
+            let newScore = score + 1
+            scoreManager.updateScores(newScore: newScore)
+            score = newScore
             hapticsManager.foodEatenHaptic()
+            
+            if newScore > scoreManager.highScore {
+                showSparkles = true
+                sparkleOpacity = 1
+                withAnimation(.easeOut(duration: 1.5)) {
+                    sparkleOpacity = 0
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    showSparkles = false
+                }
+            }
+            
             generateNewFoodPosition(maxX: maxX, maxY: maxY)
-            print("🐍 Food eaten: \(score + 1), Total length: \(snakePositions.count + 1)")
+            print("🐍 Food eaten: \(newScore), Total length: \(snakePositions.count + 1)")
         } else {
             snakePositions.removeLast()
         }
@@ -217,41 +221,35 @@ struct GameView: View {
             let layout = calculateLayout(for: geometry)
             let buttonSize = min(geometry.size.width * 0.15, 50.0)
             
-            ZStack {  // MARK: - Root ZStack: Main container for background and entire game layout
-                Color(red: 0.65, green: 0.75, blue: 0.65)  // Main background color
+            ZStack {
+                Color(red: 0.65, green: 0.75, blue: 0.65)
                     .edgesIgnoringSafeArea(.all)
 
                 VStack(spacing: 0) {
                     HStack(spacing: geometry.size.width * 0.02) {
                         // High Score (on the left)
-                        Image(systemName: "crown.fill")
-                            .font(.title)
-                            .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
-                        
-                        Text("\(scoreManager.highScore)")
-                            .font(.title)
-                            .bold()
-                            .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
+                        AnimatedScoreView(
+                            score: scoreManager.highScore,
+                            isHighScore: true
+                        )
+                        .frame(maxHeight: .infinity)  // Fill the available height
                         
                         Spacer()
                         
                         // Current Score (on the right)
                         Text("\(score)")
-                            .font(.title2) // Slightly smaller
+                            .font(.title2)
+                            .fontWeight(.bold)
                             .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
                     }
-                    .frame(height: geometry.size.height * 0.03)
+                    .frame(height: geometry.size.height * 0.03)  // Set the container height
                     .padding(.horizontal, geometry.size.width * 0.02)
-                    .padding(.bottom, geometry.size.height * 0.007)
+                    .padding(.bottom, geometry.size.height * 0.007)  // Consistent bottom margin for both scores
 
-                    ZStack {  // MARK: - Game Area ZStack: Contains game board, snake, food, and overlays
-                        // This is where we want to add the checkerboard pattern
-                        
-                        // Base darker green
+                    ZStack {
                         Rectangle()
                             .fill(Color(red: 0.60, green: 0.70, blue: 0.60))
                         
-                        // Checkerboard pattern
                         GeometryReader { proxy in
                             let columns = Int(proxy.size.width / layout.squareSize)
                             let rows = Int(proxy.size.height / layout.squareSize)
@@ -260,7 +258,7 @@ struct GameView: View {
                                 ForEach(0..<columns, id: \.self) { column in
                                     if (row + column).isMultiple(of: 2) {
                                         Rectangle()
-                                            .fill(Color(red: 0.58, green: 0.68, blue: 0.58))  // Slightly darker shade
+                                            .fill(Color(red: 0.58, green: 0.68, blue: 0.58))
                                             .frame(width: layout.squareSize, height: layout.squareSize)
                                             .position(
                                                 x: CGFloat(column) * layout.squareSize + layout.squareSize/2,
@@ -271,8 +269,6 @@ struct GameView: View {
                             }
                         }
                         
-                        // Border
-
                         Rectangle()
                             .stroke(
                                 Color(red: 0.0, green: 0.1, blue: 0.0),
@@ -306,10 +302,15 @@ struct GameView: View {
                                 y: CGFloat(foodPosition.y) * layout.squareSize + layout.squareSize/2
                             )
                         
+                        if showSparkles {
+                            SparkleView()
+                                .opacity(sparkleOpacity)
+                                .allowsHitTesting(false)
+                        }
+                        
                         if isGameOver {
-                            // Add blur overlay first
                             Rectangle()
-                                .fill(Color.black.opacity(0.4))  // Semi-transparent black
+                                .fill(Color.black.opacity(0.4))
                                 .blur(radius: 3)
                                 .ignoresSafeArea()
                             
@@ -333,17 +334,16 @@ struct GameView: View {
                             .animation(.easeInOut(duration: 0.5), value: isGameOver)
                         }
                         
-                        if isPaused && !isGameOver {  // Only show pause overlay if not game over
-                            // Add blur overlay first
+                        if isPaused && !isGameOver {
                             Rectangle()
-                                .fill(Color.black.opacity(0.4))  // Semi-transparent black
+                                .fill(Color.black.opacity(0.4))
                                 .blur(radius: 3)
                                 .ignoresSafeArea()
                             
                             VStack(spacing: 20) {
                                 Text("Game Paused")
                                     .font(.system(size: 40, weight: .bold))
-                                    .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.2))  // Much lighter, more vibrant green
+                                    .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.2))
                                     .transition(.scale)
 
                                 Button(action: { togglePause(maxX: layout.maxX, maxY: layout.maxY) }) {
@@ -359,15 +359,13 @@ struct GameView: View {
                             .transition(.opacity)
                             .animation(.easeInOut(duration: 0.5), value: isPaused)
                         }
-                        
-                        
                     }
                     .frame(
                         width: geometry.size.width - (geometry.size.width * 0.02 * 2),
                         height: geometry.size.height - (geometry.size.height * 0.13)
                     )
                     .padding(.horizontal, geometry.size.width * 0.02)
-                    
+
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 20)
                             .onEnded { gesture in
