@@ -160,3 +160,64 @@ class ScoreManager: ObservableObject {
         }
     }
 }
+
+extension ScoreManager {
+    enum DeletionType {
+        case highScoreOnly
+        case allStats
+    }
+    
+    func deleteData(_ type: DeletionType) async {
+        let privateDB = container.privateCloudDatabase
+        
+        switch type {
+        case .highScoreOnly:
+            // Reset high score in memory
+            highScore = 0
+            stats.highScore = 0
+            
+            // Delete from CloudKit if exists
+            if let recordID = recordID {
+                do {
+                    try await privateDB.deleteRecord(withID: recordID)
+                    self.recordID = nil
+                    print("🐍 Successfully deleted high score")
+                } catch {
+                    print("🐍 Error deleting high score: \(error.localizedDescription)")
+                }
+            }
+            
+        case .allStats:
+            // Reset all stats in memory
+            highScore = 0
+            stats = GameStats(
+                totalGamesPlayed: 0,
+                aiGamesPlayed: 0,
+                totalPlaytime: 0,
+                currentScore: 0,
+                highScore: 0
+            )
+            
+            // Delete both records from CloudKit if they exist
+            if let recordID = recordID {
+                do {
+                    try await privateDB.deleteRecord(withID: recordID)
+                    self.recordID = nil
+                    print("🐍 Successfully deleted high score record")
+                } catch {
+                    print("🐍 Error deleting high score: \(error.localizedDescription)")
+                }
+            }
+            
+            if let statsRecordID = statsRecordID {
+                do {
+                    try await privateDB.deleteRecord(withID: statsRecordID)
+                    self.statsRecordID = nil
+                    print("🐍 Successfully deleted stats record")
+                } catch {
+                    print("🐍 Error deleting stats: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+}

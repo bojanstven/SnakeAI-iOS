@@ -87,12 +87,23 @@ struct SettingsView: View {
                         ScrollView {
                             VStack(spacing: 20) {
                                 headerView(geometry: geometry)
+                                
+                                // Game Settings
                                 speedView()
                                 Divider()
-                                StatsView(scoreManager: scoreManager)
+                                
+                                // Controls Settings
                                 wallsToggle()
                                 autoplayToggle()
                                 aiLevelView()
+                                Divider()
+                                
+                                // Game Statistics
+                                StatsView(scoreManager: scoreManager)
+                                Divider()
+                                
+                                // Reset Options (renamed from Data Management)
+                                DataManagementView(scoreManager: scoreManager)  // You might want to rename this struct too
                             }
                             .padding()
                         }
