@@ -9,15 +9,8 @@ class GameLoop: ObservableObject {
     
     var frameCallback: (() -> Void)?
     
-    var updateInterval: TimeInterval = 0.2 {
-        didSet {
-            // Restart the loop with new interval if it was running
-            if displayLink != nil {
-                stop()
-                start()
-            }
-        }
-    }
+    // Removed the didSet observer that was causing the restarts
+    var updateInterval: TimeInterval = 0.2
     
     init() {}
     

@@ -1,5 +1,43 @@
 import SwiftUI
 
+struct SparkleView: View {
+    let sparkleCount = 12  // Increased number of particles
+    
+    // Golden color variations
+    private let sparkleColors: [Color] = [
+        Color(red: 1.0, green: 0.84, blue: 0.0),     // Pure gold
+        Color(red: 1.0, green: 0.75, blue: 0.0),     // Darker gold
+        Color(red: 1.0, green: 0.90, blue: 0.2),     // Lighter gold
+        Color(red: 0.95, green: 0.85, blue: 0.4),    // Pale gold
+        Color(red: 0.90, green: 0.77, blue: 0.0)     // Deep gold
+    ]
+    
+    var body: some View {
+        ZStack {
+            ForEach(0..<sparkleCount, id: \.self) { index in
+                SparkleParticle(
+                    angle: Double(index) * (360.0 / Double(sparkleCount)),
+                    color: sparkleColors[index % sparkleColors.count]
+                )
+            }
+        }
+    }
+}
+
+struct SparkleParticle: View {
+    let angle: Double
+    let color: Color
+    
+    var body: some View {
+        Image(systemName: "sparkle")
+            .font(.system(size: 12))
+            .foregroundColor(color)
+            .offset(x: cos(angle * .pi / 180) * 30,
+                   y: sin(angle * .pi / 180) * 30)
+            .animation(.easeOut(duration: 1.0), value: angle)
+    }
+}
+
 struct AnimatedScoreView: View {
     let score: Int
     let isHighScore: Bool
@@ -43,64 +81,33 @@ struct AnimatedScoreView: View {
     var body: some View {
         GeometryReader { geo in
             HStack(alignment: .center, spacing: geo.size.width * 0.02) {
-                Image(systemName: "crown.fill")
-                    .font(.title)
-                    .foregroundColor(goldColor)
-                    .scaleEffect(crownScale)
-                    .offset(y: -geo.size.height * 0.35)  // Increased from 0.15 to 0.25
+                ZStack {
+                    Image(systemName: "crown.fill")
+                        .font(.title)
+                        .foregroundColor(goldColor)
+                        .scaleEffect(crownScale)
+                        .offset(y: -geo.size.height * 0.35)
+                    
+                    if showSparkles {
+                        SparkleView()
+                            .opacity(opacity)
+                            .offset(y: -geo.size.height * 0.35)
+                    }
+                }
                 
                 Text("\(score)")
                     .font(.title)
                     .bold()
                     .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
                     .scaleEffect(scoreScale)
-                    .offset(y: -geo.size.height * 0.25)  // Increased from 0.15 to 0.25
+                    .offset(y: -geo.size.height * 0.25)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        }
-    }
-}
-
-    
-struct SparkleView: View {
-    let sparkleCount = 12  // Increased number of particles
-    
-    // Golden color variations
-    private let sparkleColors: [Color] = [
-        Color(red: 1.0, green: 0.84, blue: 0.0),     // Pure gold
-        Color(red: 1.0, green: 0.75, blue: 0.0),     // Darker gold
-        Color(red: 1.0, green: 0.90, blue: 0.2),     // Lighter gold
-        Color(red: 0.95, green: 0.85, blue: 0.4),    // Pale gold
-        Color(red: 0.90, green: 0.77, blue: 0.0)     // Deep gold
-    ]
-    
-    var body: some View {
-        ZStack {
-            ForEach(0..<sparkleCount, id: \.self) { index in
-                SparkleParticle(
-                    angle: Double(index) * (360.0 / Double(sparkleCount)),
-                    color: sparkleColors[index % sparkleColors.count]
-                )
+            .onChange(of: score) { oldScore, newScore in
+                if isHighScore && oldScore != newScore {
+                    animateNewHighScore()
+                }
             }
         }
     }
-}
-
-struct SparkleParticle: View {
-    let angle: Double
-    let color: Color
-    
-    var body: some View {
-        Image(systemName: "sparkle")
-            .font(.system(size: 12))
-            .foregroundColor(color)
-            .offset(x: cos(angle * .pi / 180) * 30,
-                   y: sin(angle * .pi / 180) * 30)
-            .animation(.easeOut(duration: 1.0), value: angle)
-    }
-}
-
-#Preview {
-    AnimatedScoreView(score: 42, isHighScore: true)
-        .frame(height: 50)
 }

@@ -30,8 +30,8 @@ struct GameView: View {
     @StateObject private var gameLoop = GameLoop()
     @StateObject private var snakeAI = SnakeAI(level: .basic)
     @StateObject private var soundManager = SoundManager()
-
-
+    
+    
     @State private var isPaused = false
     @State private var score = 0
     @State private var snakePositions = [Position(x: 0, y: 0)]
@@ -55,6 +55,11 @@ struct GameView: View {
     
     private let moveInterval: TimeInterval = 0.2
     private let frameWidth: CGFloat = 1
+    
+    @State private var powerUpsEnabled = true
+    @State private var enabledPowerUps: Set<PowerUpType> = Set(PowerUpType.allCases.filter { $0 != .slow })
+    @State private var powerUpFoods: [PowerUpFood] = []
+    @State private var activePowerUps: [ActivePowerUp] = []
     
     private var borderStyle: StrokeStyle {
         StrokeStyle(
@@ -103,7 +108,7 @@ struct GameView: View {
         
         generateNewFoodPosition(maxX: layout.maxX, maxY: layout.maxY)
         print("🐍 New game started! Grid size: \(layout.maxX)x\(layout.maxY)")
-
+        
         gameLoop.frameCallback = { [self] in
             moveSnake(maxX: layout.maxX, maxY: layout.maxY)
         }
@@ -116,13 +121,49 @@ struct GameView: View {
         print("🐍 Forced immediate move in direction: \(direction)")
     }
     
+    
+    private func baseIntervalForGameSpeed(_ speed: Int) -> TimeInterval {
+        let intervals: [TimeInterval] = [0.3, 0.25, 0.2, 0.15, 0.1]  // From slowest to fastest
+        return intervals[speed]
+    }
+
+    
     private func generateNewFoodPosition(maxX: Int, maxY: Int) {
+        // Generate regular food position
         repeat {
             foodPosition = Position(
                 x: Int.random(in: 0..<maxX),
                 y: Int.random(in: 0..<maxY)
             )
-        } while snakePositions.contains(foodPosition)
+        } while snakePositions.contains(foodPosition) ||
+        powerUpFoods.contains(where: { $0.position == foodPosition })
+        
+        // Generate power-up food
+        if powerUpsEnabled && !enabledPowerUps.isEmpty {
+            // 20% chance to spawn a power-up
+            if Double.random(in: 0...1) < 0.2 {
+                let availablePowerUps = Array(enabledPowerUps)
+                let randomPowerUp = availablePowerUps.randomElement()!
+                
+                var powerUpPosition: Position
+                repeat {
+                    powerUpPosition = Position(
+                        x: Int.random(in: 0..<maxX),
+                        y: Int.random(in: 0..<maxY)
+                    )
+                } while snakePositions.contains(powerUpPosition) ||
+                powerUpPosition == foodPosition ||
+                powerUpFoods.contains(where: { $0.position == powerUpPosition })
+                
+                powerUpFoods.append(PowerUpFood(
+                    position: powerUpPosition,
+                    type: randomPowerUp,
+                    createdAt: Date()
+                ))
+                
+                print("🐍 Power-up spawned: \(randomPowerUp.rawValue) at position: (\(powerUpPosition.x), \(powerUpPosition.y))")
+            }
+        }
     }
     
     private func moveSnake(maxX: Int, maxY: Int) {
@@ -162,7 +203,7 @@ struct GameView: View {
                 return
             }
         }
-
+        
         if snakePositions.contains(newHead) {
             endGame()
             return
@@ -171,8 +212,30 @@ struct GameView: View {
         snakePositions.insert(newHead, at: 0)
         lastDirection = direction
         
+        // Check for power-up collection
+        if let powerUpIndex = powerUpFoods.firstIndex(where: { $0.position == newHead }) {
+            let powerUp = powerUpFoods[powerUpIndex]
+            powerUpFoods.remove(at: powerUpIndex)
+            
+            // Add to active power-ups
+            activePowerUps.append(ActivePowerUp(
+                type: powerUp.type,
+                expiresAt: Date().addingTimeInterval(powerUp.type.duration)
+            ))
+            
+            print("🐍 Power-up collected: \(powerUp.type.rawValue)")
+            print("🐍 Power-up duration: \(powerUp.type.duration)s")
+            
+            hapticsManager.foodEatenHaptic()
+            soundManager.playEatFood()
+        }
+        
+        // Regular food collection
         if newHead == foodPosition {
-            let newScore = score + 1
+            let basePoints = 1
+            let pointMultiplier = activePowerUps.first(where: { $0.type == .golden })?.type.scoreMultiplier ?? 1
+            let newScore = score + (basePoints * pointMultiplier)
+            
             scoreManager.updateScores(newScore: newScore)
             score = newScore
             hapticsManager.foodEatenHaptic()
@@ -190,13 +253,38 @@ struct GameView: View {
             } else {
                 soundManager.playEatFood()
             }
-
+            
             generateNewFoodPosition(maxX: maxX, maxY: maxY)
             print("🐍 Food eaten: \(newScore), Total length: \(snakePositions.count + 1)")
+            
+            if pointMultiplier > 1 {
+                print("🐍 Score multiplier active: \(pointMultiplier)x")
+            }
         } else {
             snakePositions.removeLast()
         }
+        
+        // Update game speed based on active power-ups
+        let baseInterval = baseIntervalForGameSpeed(gameSpeed)  // Use slider speed as base
+        if let speedPowerUp = activePowerUps.first(where: { $0.type == .speed }) {
+            gameLoop.updateInterval = baseInterval / 2
+            print("🐍 Speed boost active: \(speedPowerUp.remainingTime)s remaining")
+        } else if let slowPowerUp = activePowerUps.first(where: { $0.type == .slow }) {
+            gameLoop.updateInterval = baseInterval * 2
+            print("🐍 Speed reduction active: \(slowPowerUp.remainingTime)s remaining")
+        } else {
+            gameLoop.updateInterval = baseInterval
+        }
+        
+        // Clean up expired power-ups
+        let expiredCount = activePowerUps.filter({ $0.isExpired }).count
+        if expiredCount > 0 {
+            print("🐍 \(expiredCount) power-up(s) expired")
+        }
+        activePowerUps.removeAll(where: { $0.isExpired })
+        powerUpFoods.removeAll(where: { $0.isExpired })
     }
+    
     
     private func togglePause(maxX: Int, maxY: Int) {
         isPaused = !isPaused
@@ -217,7 +305,7 @@ struct GameView: View {
         scoreManager.endGame()
         print("🐍 Game Over! Final Score: \(score)")
     }
-
+    
     private func tryChangeDirection(_ newDirection: Direction) {
         if newDirection != direction.opposite && newDirection != lastDirection.opposite {
             direction = newDirection
@@ -232,28 +320,28 @@ struct GameView: View {
             ZStack {
                 Color(red: 0.65, green: 0.75, blue: 0.65)
                     .edgesIgnoringSafeArea(.all)
-
+                
                 VStack(spacing: 0) {
+                    // Score header
                     HStack(spacing: geometry.size.width * 0.02) {
-                        // High Score (on the left)
                         AnimatedScoreView(
                             score: scoreManager.highScore,
                             isHighScore: true
                         )
-                        .frame(maxHeight: .infinity)  // Fill the available height
+                        .frame(maxHeight: .infinity)
                         
                         Spacer()
                         
-                        // Current Score (on the right)
                         Text("\(score)")
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
                     }
-                    .frame(height: geometry.size.height * 0.03)  // Set the container height
+                    .frame(height: geometry.size.height * 0.03)
                     .padding(.horizontal, geometry.size.width * 0.02)
-                    .padding(.bottom, geometry.size.height * 0.007)  // Consistent bottom margin for both scores
-
+                    .padding(.bottom, geometry.size.height * 0.007)
+                    
+                    // Game board
                     ZStack {
                         Rectangle()
                             .fill(Color(red: 0.60, green: 0.70, blue: 0.60))
@@ -283,11 +371,12 @@ struct GameView: View {
                                 style: borderStyle
                             )
                         
+                        // Snake body
                         ForEach(0..<snakePositions.count, id: \.self) { index in
                             Rectangle()
                                 .fill(index == 0
-                                    ? Color(red: 0.0, green: 0.3, blue: 0.0)
-                                    : Color(red: 0.0, green: 0.5, blue: 0.0)
+                                      ? Color(red: 0.0, green: 0.3, blue: 0.0)
+                                      : Color(red: 0.0, green: 0.5, blue: 0.0)
                                 )
                                 .frame(
                                     width: layout.squareSize - 1,
@@ -299,6 +388,7 @@ struct GameView: View {
                                 )
                         }
                         
+                        // Regular food
                         Rectangle()
                             .fill(Color(red: 0.8, green: 0.0, blue: 0.0))
                             .frame(
@@ -309,6 +399,24 @@ struct GameView: View {
                                 x: CGFloat(foodPosition.x) * layout.squareSize + layout.squareSize/2,
                                 y: CGFloat(foodPosition.y) * layout.squareSize + layout.squareSize/2
                             )
+                        
+                        // Power-up foods
+                        ForEach(powerUpFoods, id: \.position) { powerUp in
+                            PowerUpFoodView(powerUp: powerUp, size: layout.squareSize)
+                                .position(
+                                    x: CGFloat(powerUp.position.x) * layout.squareSize + layout.squareSize/2,
+                                    y: CGFloat(powerUp.position.y) * layout.squareSize + layout.squareSize/2
+                                )
+                        }
+                        
+                        // Active power-up indicators
+                        VStack {
+                            ForEach(activePowerUps, id: \.expiresAt) { powerUp in
+                                ActivePowerUpIndicator(powerUp: powerUp)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .padding()
                         
                         if showSparkles {
                             SparkleView()
@@ -323,7 +431,7 @@ struct GameView: View {
                                 .ignoresSafeArea()
                             
                             VStack(spacing: 20) {
-                                Text("You Died!")
+                                Text("Game Over!")
                                     .font(.system(size: 40, weight: .bold))
                                     .foregroundColor(.red)
                                     .transition(.scale)
@@ -353,7 +461,7 @@ struct GameView: View {
                                     .font(.system(size: 40, weight: .bold))
                                     .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.2))
                                     .transition(.scale)
-
+                                
                                 Button(action: { togglePause(maxX: layout.maxX, maxY: layout.maxY) }) {
                                     Text("Resume")
                                         .font(.title2)
@@ -373,7 +481,8 @@ struct GameView: View {
                         height: geometry.size.height - (geometry.size.height * 0.13)
                     )
                     .padding(.horizontal, geometry.size.width * 0.02)
-
+                    
+                    
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 20)
                             .onEnded { gesture in
@@ -391,7 +500,7 @@ struct GameView: View {
                                         
                                         if newDirection == direction {
                                             print("🐍 Same direction swipe!")
-                                            moveSnake(maxX: layout.maxX, maxY: layout.maxY)
+                                            forceImmediateMove(maxX: layout.maxX, maxY: layout.maxY)
                                         } else if newDirection != direction.opposite && newDirection != lastDirection.opposite {
                                             direction = newDirection
                                         }
@@ -401,7 +510,7 @@ struct GameView: View {
                                         
                                         if newDirection == direction {
                                             print("🐍 Same direction swipe!")
-                                            moveSnake(maxX: layout.maxX, maxY: layout.maxY)
+                                            forceImmediateMove(maxX: layout.maxX, maxY: layout.maxY)
                                         } else if newDirection != direction.opposite && newDirection != lastDirection.opposite {
                                             direction = newDirection
                                         }
@@ -411,18 +520,17 @@ struct GameView: View {
                                 }
                             }
                     )
-                    
-                    .gesture(  // Change this to regular gesture instead of SpatialTapGesture
+                    .gesture(
                         TapGesture()
                             .onEnded { _ in
-                                if !isGameOver && !settingsOpen {  // Add settingsOpen check
+                                if !isGameOver && !settingsOpen {
                                     togglePause(maxX: layout.maxX, maxY: layout.maxY)
                                 }
                             }
                     )
-
-                    HStack(spacing: geometry.size.width * 0.02) {  // Reduced spacing between buttons
-                        // Walls toggle
+                    
+                    // Bottom buttons
+                    HStack(spacing: geometry.size.width * 0.02) {
                         Button(action: {
                             hapticsManager.toggleHaptic()
                             DispatchQueue.main.async {
@@ -445,11 +553,10 @@ struct GameView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: buttonSize)
                             .background(Color(red: 0.0, green: 0.5, blue: 0.0))
-                            .foregroundColor(!wallsOn ? .white : .black)  // White when walls are off (pass through)
+                            .foregroundColor(!wallsOn ? .white : .black)
                             .cornerRadius(8)
                         }
                         
-                        // Gamepad status - icon only
                         Button(action: {}) {
                             Image(systemName: "gamecontroller.fill")
                                 .font(.title2)
@@ -460,7 +567,6 @@ struct GameView: View {
                         }
                         .disabled(true)
                         
-                        // Autoplay toggle
                         Button(action: {
                             autoplayEnabled.toggle()
                             hapticsManager.toggleHaptic()
@@ -472,30 +578,27 @@ struct GameView: View {
                                 print("🐍 Manual Control restored")
                             }
                         }) {
-                            HStack(spacing: 2) {  // Minimal spacing between icon and text
+                            HStack(spacing: 2) {
                                 Image(systemName: "brain.filled.head.profile")
                                     .font(.title2)
                                 Text("Auto")
                                     .font(.system(size: 20, weight: .medium))
                                     .lineLimit(1)
                             }
-                            .frame(maxWidth: .infinity)  // Fill available space
+                            .frame(maxWidth: .infinity)
                             .frame(height: buttonSize)
                             .background(Color(red: 0.0, green: 0.5, blue: 0.0))
                             .foregroundColor(autoplayEnabled ? .white : .black)
                             .cornerRadius(8)
                         }
                         
-                        // Settings toggle
                         Button(action: {
                             settingsOpen.toggle()
                             hapticsManager.toggleHaptic()
                             if settingsOpen {
-                                // Store current state and pause
                                 gameLoop.stop()
                                 isPaused = true
                             } else {
-                                // Resume game
                                 gameLoop.start()
                                 isPaused = false
                             }
@@ -507,10 +610,9 @@ struct GameView: View {
                                 .foregroundColor(settingsOpen ? .white : .black)
                                 .cornerRadius(8)
                         }
-
                     }
-                    .padding(.horizontal, geometry.size.width * 0.02)  // Minimal padding at edges
-                    .padding(.vertical, geometry.size.height * 0.01)   // Minimal vertical padding
+                    .padding(.horizontal, geometry.size.width * 0.02)
+                    .padding(.vertical, geometry.size.height * 0.01)
                 }
                 
                 if settingsOpen {
@@ -524,10 +626,12 @@ struct GameView: View {
                         isGameOver: $isGameOver,
                         gameLoop: gameLoop,
                         gameSpeed: $gameSpeed,
-                        scoreManager: scoreManager
+                        scoreManager: scoreManager,
+                        powerUpsEnabled: $powerUpsEnabled,
+                        enabledPowerUps: $enabledPowerUps,
+                        baseIntervalForGameSpeed: baseIntervalForGameSpeed
                     )
                 }
-
             }
             .onAppear {
                 startGame(with: layout)
@@ -542,17 +646,17 @@ struct GameView: View {
                 switch newPhase {
                 case .active:
                     print("🐍 App became active")
-                    // Don't auto-resume, let user decide
+                    hapticsManager.restartEngine()
                 case .inactive:
                     print("🐍 App became inactive")
                     if !isPaused && !isGameOver {
-                        // Optional: Pause on partial hide when in manual mode
                         if !autoplayEnabled {
                             togglePause(maxX: layout.maxX, maxY: layout.maxY)
                         }
                     }
                 case .background:
                     print("🐍 App entered background")
+                    hapticsManager.stopEngine()
                     if !isPaused && !isGameOver {
                         togglePause(maxX: layout.maxX, maxY: layout.maxY)
                     }
