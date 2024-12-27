@@ -619,7 +619,7 @@ struct GameControlButtons: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: buttonSize)
-                .background(Color(red: 0.0, green: 0.5, blue: 0.0))
+                .background(Color(red: 0.0, green: 0.5, blue: 0.0).opacity(0.6))  // 20% translucent
                 .foregroundColor(!wallsOn.wrappedValue ? .white : .black)
                 .cornerRadius(8)
             }
@@ -642,7 +642,7 @@ struct GameControlButtons: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: buttonSize)
-                .background(Color(red: 0.0, green: 0.5, blue: 0.0))
+                .background(Color(red: 0.0, green: 0.5, blue: 0.0).opacity(0.6))  // 20% translucent
                 .foregroundColor(autoplayEnabled.wrappedValue ? .white : .black)
                 .cornerRadius(8)
             }
@@ -657,7 +657,7 @@ struct GameControlButtons: View {
                 Image(systemName: "gearshape.fill")
                     .font(.title2)
                     .frame(width: buttonSize, height: buttonSize)
-                    .background(Color(red: 0.0, green: 0.5, blue: 0.0))
+                    .background(Color(red: 0.0, green: 0.5, blue: 0.0).opacity(0.6))  // 20% translucent
                     .foregroundColor(settingsOpen.wrappedValue ? .white : .black)
                     .cornerRadius(8)
             }
