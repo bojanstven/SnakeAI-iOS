@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "Snake Ai light mode.png",
+      "filename" : "Snake AI.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "Snake Ai light mode 1.png",
+      "filename" : "Snake AI 1.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "Snake Ai light mode 2.png",
+      "filename" : "Snake AI 2.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
