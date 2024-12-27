@@ -600,7 +600,7 @@ struct GameControlButtons: View {
     let soundManager: SoundManager
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 20) {  // Increased spacing between icons
             Button(action: {
                 hapticsManager.toggleHaptic()
                 wallsOn.wrappedValue.toggle()
@@ -610,18 +610,12 @@ struct GameControlButtons: View {
                     soundManager.playWallSwitchOff()
                 }
             }) {
-                HStack(spacing: 2) {
-                    Image(systemName: !wallsOn.wrappedValue ? "shield.lefthalf.filled.slash" : "shield.lefthalf.filled")
-                        .font(.title2)
-                    Text("Walls")
-                        .font(.system(size: 20, weight: .medium))
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: buttonSize)
-                .background(Color(red: 0.0, green: 0.5, blue: 0.0).opacity(0.5))  // 50% translucent
-                .foregroundColor(!wallsOn.wrappedValue ? .white : .black)
-                .cornerRadius(8)
+                Image(systemName: !wallsOn.wrappedValue ? "firewall.fill" : "shield.slash.fill")
+                    .font(.system(size: 37))
+                    .foregroundColor(!wallsOn.wrappedValue ? .white : .black)
+                    .frame(width: 50, height: 50)
+                    .frame(minWidth: 50, minHeight: 50)  // Minimum touch target size
+                    .clipShape(Circle())  // Make the touch target circular
             }
             
             Button(action: {
@@ -633,18 +627,12 @@ struct GameControlButtons: View {
                     soundManager.playAutoplayOff()
                 }
             }) {
-                HStack(spacing: 2) {
-                    Image(systemName: "brain.filled.head.profile")
-                        .font(.title2)
-                    Text("Auto")
-                        .font(.system(size: 20, weight: .medium))
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: buttonSize)
-                .background(Color(red: 0.0, green: 0.5, blue: 0.0).opacity(0.5))  // 50% translucent
-                .foregroundColor(autoplayEnabled.wrappedValue ? .white : .black)
-                .cornerRadius(8)
+                Image(systemName: autoplayEnabled.wrappedValue ? "steeringwheel.and.hands" : "steeringwheel.slash")
+                    .font(.system(size: 37))
+                    .foregroundColor(autoplayEnabled.wrappedValue ? .white : .black)
+                    .frame(width: 50, height: 50)  // Fixed width to accommodate widest icon
+                    .frame(minWidth: 50, minHeight: 50)
+                    .clipShape(Circle())
             }
             
             Button(action: {
@@ -655,15 +643,15 @@ struct GameControlButtons: View {
                 }
             }) {
                 Image(systemName: "gearshape.fill")
-                    .font(.title2)
-                    .frame(width: buttonSize, height: buttonSize)
-                    .background(Color(red: 0.0, green: 0.5, blue: 0.0).opacity(0.5))  // 50% translucent
+                    .font(.system(size: 37))
                     .foregroundColor(settingsOpen.wrappedValue ? .white : .black)
-                    .cornerRadius(8)
+                    .frame(width: 50, height: 50)
+                    .frame(minWidth: 50, minHeight: 50)
+                    .clipShape(Circle())
             }
         }
         .padding(.horizontal)
-        .padding(.bottom, 8)
+        .padding(.bottom, 6)
         }
     }
 

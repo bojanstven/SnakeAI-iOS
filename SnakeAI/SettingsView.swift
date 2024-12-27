@@ -139,7 +139,9 @@ struct SettingsView: View {
     private func wallsToggle() -> some View {
         Toggle(isOn: $wallsOn) {
             HStack {
-                Image(systemName: wallsOn ? "shield.lefthalf.filled" : "shield.lefthalf.filled.slash")
+                Image(systemName: wallsOn ? "shield.slash.fill" : "firewall.fill")
+                    .font(.system(size: 24))
+                    .frame(width: 50, height: 30)
                 Text("Walls \(wallsOn ? "On" : "Off")")
                     .font(.headline)
             }
@@ -150,8 +152,10 @@ struct SettingsView: View {
     private func autoplayToggle() -> some View {
         Toggle(isOn: $autoplayEnabled) {
             HStack {
-                Image(systemName: "brain.filled.head.profile")
-                Text("AI Autoplay")
+                Image(systemName: autoplayEnabled ? "steeringwheel.and.hands" : "steeringwheel.slash")
+                    .font(.system(size: 24))
+                    .frame(width: 50, height: 30)
+                Text("AI Autopilot")
                     .font(.headline)
             }
         }
@@ -257,7 +261,7 @@ struct SettingsView: View {
                     
                     VStack(spacing: 0) {
                         ScrollView {
-                            VStack(spacing: 20) {
+                            VStack(spacing: 11) {
                                 headerView(geometry: geometry)
                                 
                                 // Game Settings
