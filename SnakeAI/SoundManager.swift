@@ -28,6 +28,19 @@ class SoundManager: ObservableObject {
         gamepadConnectSound = loadSound(fileName: "gamepad-connect")
     }
     
+    func setVolume(_ volume: Float) {
+            eatFoodSound?.setVolume(volume, fadeDuration: 0)
+            gameOverSound?.setVolume(volume, fadeDuration: 0)
+            gamePauseSound?.setVolume(volume, fadeDuration: 0)
+            gameUnpauseSound?.setVolume(volume, fadeDuration: 0)
+            autoplayOnSound?.setVolume(volume, fadeDuration: 0)
+            autoplayOffSound?.setVolume(volume, fadeDuration: 0)
+            wallSwitchOnSound?.setVolume(volume, fadeDuration: 0)
+            wallSwitchOffSound?.setVolume(volume, fadeDuration: 0)
+            gamepadConnectSound?.setVolume(volume, fadeDuration: 0)
+        }
+
+    
     private func loadSound(fileName: String) -> AVAudioPlayer? {
         if let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") {
             do {

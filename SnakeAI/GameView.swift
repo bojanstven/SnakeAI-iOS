@@ -45,6 +45,7 @@ struct GameView: View {
     @State private var autoplayEnabled = false
     @State private var settingsOpen = false
     @State private var isInitialized = false
+    @State private var isSoundEnabled = true
     
     @State private var showSparkles = false
     @State private var sparkleOpacity: CGFloat = 0
@@ -306,6 +307,18 @@ struct GameView: View {
     }
     
     
+    private func toggleSound() {
+        isSoundEnabled.toggle()
+        if isSoundEnabled {
+            // Re-enable sounds
+            soundManager.setVolume(1.0)
+        } else {
+            // Mute sounds
+            soundManager.setVolume(0.0)
+        }
+        hapticsManager.toggleHaptic() // Provide haptic feedback for the toggle
+    }
+    
     private func togglePause(maxX: Int, maxY: Int) {
         isPaused = !isPaused
         if isPaused {
@@ -526,8 +539,8 @@ struct GameView: View {
                     wallsOn: $wallsOn,
                     autoplayEnabled: $autoplayEnabled,
                     settingsOpen: $settingsOpen,
-                    gamepadConnected: gamepadConnected,
                     isPaused: $isPaused,
+                    isSoundEnabled: $isSoundEnabled,
                     hapticsManager: hapticsManager,
                     soundManager: soundManager
                 )
@@ -594,13 +607,30 @@ struct GameControlButtons: View {
     let wallsOn: Binding<Bool>
     let autoplayEnabled: Binding<Bool>
     let settingsOpen: Binding<Bool>
-    let gamepadConnected: Bool
     let isPaused: Binding<Bool>
+    let isSoundEnabled: Binding<Bool>
     let hapticsManager: HapticsManager
     let soundManager: SoundManager
     
     var body: some View {
-        HStack(spacing: 20) {  // Increased spacing between icons
+        HStack(spacing: 20) {
+            Button(action: {
+                hapticsManager.toggleHaptic()
+                isSoundEnabled.wrappedValue.toggle()
+                if isSoundEnabled.wrappedValue {
+                    soundManager.setVolume(1.0)
+                } else {
+                    soundManager.setVolume(0.0)
+                }
+            }) {
+                Image(systemName: isSoundEnabled.wrappedValue ? "bell.fill" : "bell.slash.fill")
+                    .font(.system(size: 37))
+                    .foregroundColor(isSoundEnabled.wrappedValue ? .white : .black)
+                    .frame(width: 50, height: 50)
+                    .frame(minWidth: 50, minHeight: 50)
+                    .clipShape(Circle())
+            }
+            
             Button(action: {
                 hapticsManager.toggleHaptic()
                 wallsOn.wrappedValue.toggle()

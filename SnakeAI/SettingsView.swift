@@ -17,6 +17,8 @@ struct SettingsView: View {
     @Binding var gameSpeed: Int
     @Binding var powerUpsEnabled: Bool
     @Binding var enabledPowerUps: Set<PowerUpType>
+    @State private var isSoundEnabled = true
+
     
     let baseIntervalForGameSpeed: (Int) -> TimeInterval
     
@@ -136,6 +138,20 @@ struct SettingsView: View {
         }
     }
     
+    private func soundToggle() -> some View {
+            Toggle(isOn: $isSoundEnabled) {
+                HStack {
+                    Image(systemName: isSoundEnabled ? "bell.fill" : "bell.slash.fill")
+                        .font(.system(size: 24))
+                        .frame(width: 50, height: 50)
+                    Text("Sound Effects")
+                        .font(.headline)
+                }
+            }
+            .tint(Color(red: 0.0, green: 0.5, blue: 0.0))
+        }
+
+    
     private func wallsToggle() -> some View {
         Toggle(isOn: $wallsOn) {
             HStack {
@@ -241,6 +257,7 @@ struct SettingsView: View {
             }
         }
     }
+    
 
     private func versionView() -> some View {
         Text(appVersion)
@@ -269,6 +286,7 @@ struct SettingsView: View {
                                 Divider()
                                 
                                 // Controls Settings
+                                soundToggle()
                                 wallsToggle()
                                 autoplayToggle()
                                 aiLevelView()
