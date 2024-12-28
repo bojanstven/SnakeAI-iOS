@@ -41,14 +41,11 @@ struct GameView: View {
     @State private var lastDirection = Direction.right
     
     @State private var wallsOn = false
-    @State private var gamepadConnected = false
     @State private var autoplayEnabled = false
     @State private var settingsOpen = false
     @State private var isInitialized = false
     @State private var isSoundEnabled = true
     
-    @State private var showSparkles = false
-    @State private var sparkleOpacity: CGFloat = 0
     
     @State private var gameSpeed: Int = 2  // Default middle speed
     
@@ -263,14 +260,6 @@ struct GameView: View {
             
             if newScore > scoreManager.highScore {
                 soundManager.playGameOver()
-                showSparkles = true
-                sparkleOpacity = 1
-                withAnimation(.easeOut(duration: 1.5)) {
-                    sparkleOpacity = 0
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    showSparkles = false
-                }
             } else {
                 soundManager.playEatFood()
             }
@@ -316,7 +305,7 @@ struct GameView: View {
             // Mute sounds
             soundManager.setVolume(0.0)
         }
-        hapticsManager.toggleHaptic() // Provide haptic feedback for the toggle
+        hapticsManager.toggleHaptic()
     }
     
     private func togglePause(maxX: Int, maxY: Int) {
@@ -559,6 +548,7 @@ struct GameView: View {
                     isOpen: $settingsOpen,
                     wallsOn: $wallsOn,
                     autoplayEnabled: $autoplayEnabled,
+                    isSoundEnabled: $isSoundEnabled,
                     snakeAI: snakeAI,
                     hapticsManager: hapticsManager,
                     isPaused: $isPaused,
@@ -657,7 +647,7 @@ struct GameControlButtons: View {
                     soundManager.playAutoplayOff()
                 }
             }) {
-                Image(systemName: autoplayEnabled.wrappedValue ? "steeringwheel.and.hands" : "steeringwheel.slash")
+                Image(systemName: autoplayEnabled.wrappedValue ? "steeringwheel.and.hands" : "steeringwheel")
                     .font(.system(size: 37))
                     .foregroundColor(autoplayEnabled.wrappedValue ? .white : .black)
                     .frame(width: 50, height: 50)  // Fixed width to accommodate widest icon
@@ -711,6 +701,7 @@ struct ScoreHeader: View {
     }
 }
     
+
 
 
 struct DebugView: View {

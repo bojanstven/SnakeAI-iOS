@@ -17,14 +17,14 @@ struct SettingsView: View {
     @Binding var gameSpeed: Int
     @Binding var powerUpsEnabled: Bool
     @Binding var enabledPowerUps: Set<PowerUpType>
-    @State private var isSoundEnabled = true
-
+    @Binding var isSoundEnabled: Bool
     
     let baseIntervalForGameSpeed: (Int) -> TimeInterval
     
     init(isOpen: Binding<Bool>,
          wallsOn: Binding<Bool>,
          autoplayEnabled: Binding<Bool>,
+         isSoundEnabled: Binding<Bool>,
          snakeAI: SnakeAI,
          hapticsManager: HapticsManager,
          isPaused: Binding<Bool>,
@@ -39,6 +39,7 @@ struct SettingsView: View {
         self._isOpen = isOpen
         self._wallsOn = wallsOn
         self._autoplayEnabled = autoplayEnabled
+        self._isSoundEnabled = isSoundEnabled
         self._isPaused = isPaused
         self._isGameOver = isGameOver
         self._gameSpeed = gameSpeed
@@ -143,7 +144,7 @@ struct SettingsView: View {
                 HStack {
                     Image(systemName: isSoundEnabled ? "bell.fill" : "bell.slash.fill")
                         .font(.system(size: 24))
-                        .frame(width: 50, height: 50)
+                        .frame(width: 50, height: 30)
                     Text("Sound Effects")
                         .font(.headline)
                 }
@@ -168,7 +169,7 @@ struct SettingsView: View {
     private func autoplayToggle() -> some View {
         Toggle(isOn: $autoplayEnabled) {
             HStack {
-                Image(systemName: autoplayEnabled ? "steeringwheel.and.hands" : "steeringwheel.slash")
+                Image(systemName: autoplayEnabled ? "steeringwheel.and.hands" : "steeringwheel")
                     .font(.system(size: 24))
                     .frame(width: 50, height: 30)
                 Text("AI Autopilot")

@@ -10,7 +10,6 @@ class SoundManager: ObservableObject {
     private var autoplayOffSound: AVAudioPlayer?
     private var wallSwitchOnSound: AVAudioPlayer?
     private var wallSwitchOffSound: AVAudioPlayer?
-    private var gamepadConnectSound: AVAudioPlayer?
     
     init() {
         setupSounds()
@@ -25,7 +24,6 @@ class SoundManager: ObservableObject {
         autoplayOffSound = loadSound(fileName: "autoplay-off")
         wallSwitchOnSound = loadSound(fileName: "wall-switch-on")
         wallSwitchOffSound = loadSound(fileName: "wall-switch-off")
-        gamepadConnectSound = loadSound(fileName: "gamepad-connect")
     }
     
     func setVolume(_ volume: Float) {
@@ -37,7 +35,6 @@ class SoundManager: ObservableObject {
             autoplayOffSound?.setVolume(volume, fadeDuration: 0)
             wallSwitchOnSound?.setVolume(volume, fadeDuration: 0)
             wallSwitchOffSound?.setVolume(volume, fadeDuration: 0)
-            gamepadConnectSound?.setVolume(volume, fadeDuration: 0)
         }
 
     
@@ -86,7 +83,4 @@ class SoundManager: ObservableObject {
         wallSwitchOffSound?.play()
     }
     
-    func playGamepadConnect() {
-        gamepadConnectSound?.play()
-    }
 }

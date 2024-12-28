@@ -10,9 +10,22 @@
 		D9C43A112D035E150083B8E7 /* SnakeAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SnakeAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D9679E632D1F883200B7B143 /* Exceptions for "SnakeAI" folder in "SnakeAI" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D9C43A102D035E150083B8E7 /* SnakeAI */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D9C43A132D035E150083B8E7 /* SnakeAI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D9679E632D1F883200B7B143 /* Exceptions for "SnakeAI" folder in "SnakeAI" target */,
+			);
 			path = SnakeAI;
 			sourceTree = "<group>";
 		};
@@ -254,7 +267,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = ZF72L2BG8M;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnakeAI/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Snake Ai";
+				INFOPLIST_KEY_GCSupportsControllerUserInteraction = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.kids-games";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -266,7 +281,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.83;
+				MARKETING_VERSION = 2.84;
 				PRODUCT_BUNDLE_IDENTIFIER = Bojanstven.SnakeAI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -288,7 +303,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = ZF72L2BG8M;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnakeAI/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Snake Ai";
+				INFOPLIST_KEY_GCSupportsControllerUserInteraction = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.kids-games";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -300,7 +317,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.83;
+				MARKETING_VERSION = 2.84;
 				PRODUCT_BUNDLE_IDENTIFIER = Bojanstven.SnakeAI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

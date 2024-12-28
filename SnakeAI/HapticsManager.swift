@@ -120,25 +120,7 @@ class HapticsManager: ObservableObject {
             relativeTime: 0
         )
         
-        // Quick follow-up "sparkle" sensation
-        let sparkle1 = CHHapticEvent(
-            eventType: .hapticTransient,
-            parameters: [
-                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.5),
-                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.8)
-            ],
-            relativeTime: 0.05
-        )
-        
-        let sparkle2 = CHHapticEvent(
-            eventType: .hapticTransient,
-            parameters: [
-                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.3),
-                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.7)
-            ],
-            relativeTime: 0.1
-        )
-        
+    
         // Add a subtle continuous undertone
         let undertone = CHHapticEvent(
             eventType: .hapticContinuous,
@@ -150,7 +132,7 @@ class HapticsManager: ObservableObject {
             duration: 0.15
         )
         
-        return try CHHapticPattern(events: [sharpPop, sparkle1, sparkle2, undertone], parameters: [])
+        return try CHHapticPattern(events: [sharpPop, undertone], parameters: [])
     }
     
     private func gameOverPattern() throws -> CHHapticPattern {
