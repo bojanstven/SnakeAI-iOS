@@ -5,12 +5,13 @@ class GameLoop: ObservableObject {
     private var displayLink: CADisplayLink?
     private var lastUpdateTime: CFTimeInterval = 0
     private var accumulatedTime: CFTimeInterval = 0
-    private let maxAccumulatedTime: CFTimeInterval = 0.4  // Prevent spiral of death
+    private let maxAccumulatedTime: CFTimeInterval = 0.2  // Prevent spiral of death
     
     var frameCallback: (() -> Void)?
     
     // Removed the didSet observer that was causing the restarts
-    var updateInterval: TimeInterval = 0.2
+    var updateInterval: TimeInterval = 0.033  // About 30 updates per second
+
     
     init() {}
     

@@ -1,4 +1,5 @@
 import SwiftUI
+import GameController
 
 struct Position: Equatable, Hashable {
     var x: Int
@@ -39,12 +40,15 @@ struct GameView: View {
     @State private var direction = Direction.right
     @State private var isGameOver = false
     @State private var lastDirection = Direction.right
+    @State private var geometry: GeometryProxy?
+
     
     @State private var wallsOn = false
     @State private var autoplayEnabled = false
     @State private var settingsOpen = false
     @State private var isInitialized = false
     @State private var isSoundEnabled = true
+    
     
     
     @State private var gameSpeed: Int = 2  // Default middle speed
@@ -296,6 +300,7 @@ struct GameView: View {
     }
     
     
+    
     private func toggleSound() {
         isSoundEnabled.toggle()
         if isSoundEnabled {
@@ -335,6 +340,21 @@ struct GameView: View {
     }
     
     
+    private func handleDirectionChange(_ newDirection: Direction, maxX: Int, maxY: Int, squareSize: CGFloat) {
+        if !isPaused && !isGameOver && !autoplayEnabled {
+            if newDirection == direction {
+                // If trying to move in the same direction, force immediate move
+                forceImmediateMove(maxX: maxX, maxY: maxY, squareSize: squareSize)
+            } else if newDirection != direction.opposite && newDirection != lastDirection.opposite {
+                // If it's a valid new direction, change direction
+                direction = newDirection
+            }
+        } else {
+            print("🐍 Game state prevented move - Paused: \(isPaused), GameOver: \(isGameOver), Autoplay: \(autoplayEnabled)")
+        }
+    }
+
+    
     private func handleSwipe(gesture: DragGesture.Value, maxX: Int, maxY: Int, squareSize: CGFloat) {
         print("🐍 Swipe detected!")
         if !isPaused && !isGameOver && !autoplayEnabled {
@@ -342,31 +362,191 @@ struct GameView: View {
             let verticalAmount = gesture.translation.height
             
             print("🐍 Swipe amounts - H: \(horizontalAmount), V: \(verticalAmount)")
-            print("🐍 Current direction: \(direction)")
             
             if abs(horizontalAmount) > abs(verticalAmount) {
                 let newDirection = horizontalAmount > 0 ? Direction.right : Direction.left
                 print("🐍 New horizontal direction: \(newDirection)")
-                
-                if newDirection == direction {
-                    print("🐍 Same direction swipe!")
-                    forceImmediateMove(maxX: maxX, maxY: maxY, squareSize: squareSize)
-                } else if newDirection != direction.opposite && newDirection != lastDirection.opposite {
-                    direction = newDirection
-                }
+                handleDirectionChange(newDirection, maxX: maxX, maxY: maxY, squareSize: squareSize)
             } else {
                 let newDirection = verticalAmount > 0 ? Direction.down : Direction.up
                 print("🐍 New vertical direction: \(newDirection)")
-                
-                if newDirection == direction {
-                    print("🐍 Same direction swipe!")
-                    forceImmediateMove(maxX: maxX, maxY: maxY, squareSize: squareSize)
-                } else if newDirection != direction.opposite && newDirection != lastDirection.opposite {
-                    direction = newDirection
-                }
+                handleDirectionChange(newDirection, maxX: maxX, maxY: maxY, squareSize: squareSize)
             }
         } else {
             print("🐍 Game state prevented move - Paused: \(isPaused), GameOver: \(isGameOver), Autoplay: \(autoplayEnabled)")
+        }
+    }
+    
+    private func setupController(maxX: Int, maxY: Int, squareSize: CGFloat) {
+        let controllers = GCController.controllers()
+        let threshold: Float = 0.1
+        
+        for controller in controllers {
+            if let gamepad = controller.extendedGamepad {
+                // D-pad handling remains the same as it works well
+                gamepad.dpad.valueChangedHandler = { [self] (_, xValue, yValue) in
+                    if xValue == 1.0 && self.direction != .left && self.lastDirection != .left {
+                        print("🎮 D-pad RIGHT")
+                        self.handleDirectionChange(.right, maxX: maxX, maxY: maxY, squareSize: squareSize)
+                    } else if xValue == -1.0 && self.direction != .right && self.lastDirection != .right {
+                        print("🎮 D-pad LEFT")
+                        self.handleDirectionChange(.left, maxX: maxX, maxY: maxY, squareSize: squareSize)
+                    } else if yValue == 1.0 && self.direction != .down && self.lastDirection != .down {
+                        print("🎮 D-pad UP")
+                        self.handleDirectionChange(.up, maxX: maxX, maxY: maxY, squareSize: squareSize)
+                    } else if yValue == -1.0 && self.direction != .up && self.lastDirection != .up {
+                        print("🎮 D-pad DOWN")
+                        self.handleDirectionChange(.down, maxX: maxX, maxY: maxY, squareSize: squareSize)
+                    }
+                }
+                
+                // Simplified stick handling
+                var lastLeftStickDirection: Direction = .none
+                var lastRightStickDirection: Direction = .none
+                
+                gamepad.leftThumbstick.valueChangedHandler = { [self] (_, xValue, yValue) in
+                    let currentDirection = getStickDirection(x: xValue, y: yValue, threshold: threshold)
+                    
+                    if currentDirection != .none && currentDirection != lastLeftStickDirection {
+                        print("🎮 Left stick direction: \(currentDirection)")
+                        self.handleDirectionChange(currentDirection, maxX: maxX, maxY: maxY, squareSize: squareSize)
+                        lastLeftStickDirection = currentDirection
+                    } else if currentDirection == .none {
+                        lastLeftStickDirection = .none
+                    }
+                }
+                
+                gamepad.rightThumbstick.valueChangedHandler = { [self] (_, xValue, yValue) in
+                    let currentDirection = getStickDirection(x: xValue, y: yValue, threshold: threshold)
+                    
+                    if currentDirection != .none && currentDirection != lastRightStickDirection {
+                        print("🎮 Right stick direction: \(currentDirection)")
+                        self.handleDirectionChange(currentDirection, maxX: maxX, maxY: maxY, squareSize: squareSize)
+                        lastRightStickDirection = currentDirection
+                    } else if currentDirection == .none {
+                        lastRightStickDirection = .none
+                    }
+                }
+                
+                // Game restart/pause - A and B buttons
+                gamepad.buttonA.valueChangedHandler = { [self] (button, value, pressed) in
+                    if pressed {
+                        if isGameOver {
+                            print("🎮 A button pressed - restarting game")
+                            startGame(with: (squareSize: squareSize, gameHeight: 0, maxX: maxX, maxY: maxY))
+                        } else {
+                            print("🎮 A button pressed - toggling pause")
+                            togglePause(maxX: maxX, maxY: maxY)
+                        }
+                    }
+                }
+
+                gamepad.buttonB.valueChangedHandler = { [self] (button, value, pressed) in
+                    if pressed {
+                        if isGameOver {
+                            print("🎮 B button pressed - restarting game")
+                            startGame(with: (squareSize: squareSize, gameHeight: 0, maxX: maxX, maxY: maxY))
+                        } else {
+                            print("🎮 B button pressed - toggling pause")
+                            togglePause(maxX: maxX, maxY: maxY)
+                        }
+                    }
+                }
+
+                
+                // Settings toggle - both + and - buttons
+                gamepad.buttonOptions?.valueChangedHandler = { [self] (button, value, pressed) in
+                    if pressed {
+                        print("🎮 MINUS button pressed - toggling settings")
+                        settingsOpen.toggle()
+                        if settingsOpen {
+                            isPaused = true
+                        }
+                    }
+                }
+
+                gamepad.buttonMenu.valueChangedHandler = { [self] (button, value, pressed) in
+                    if pressed {
+                        print("🎮 PLUS button pressed - toggling settings")
+                        settingsOpen.toggle()
+                        if settingsOpen {
+                            isPaused = true
+                        }
+                    }
+                }
+
+                // Autoplay toggle - ZR, R and Z buttons
+                gamepad.rightTrigger.valueChangedHandler = { [self] (button, value, pressed) in
+                    if pressed {
+                        print("🎮 ZR button pressed - toggling autoplay")
+                        autoplayEnabled.toggle()
+                        hapticsManager.toggleHaptic()
+                        if autoplayEnabled {
+                            soundManager.playAutoplayOn()
+                        } else {
+                            soundManager.playAutoplayOff()
+                        }
+                    }
+                }
+
+                gamepad.rightShoulder.valueChangedHandler = { [self] (button, value, pressed) in
+                    if pressed {
+                        print("🎮 R button pressed - toggling autoplay")
+                        autoplayEnabled.toggle()
+                        hapticsManager.toggleHaptic()
+                        if autoplayEnabled {
+                            soundManager.playAutoplayOn()
+                        } else {
+                            soundManager.playAutoplayOff()
+                        }
+                    }
+                }
+
+                
+                // Sound toggle - ZL and L buttons
+                gamepad.leftTrigger.valueChangedHandler = { [self] (button, value, pressed) in
+                    if pressed {
+                        print("🎮 ZL button pressed - toggling sound")
+                        isSoundEnabled.toggle()
+                        if isSoundEnabled {
+                            soundManager.setVolume(1.0)
+                        } else {
+                            soundManager.setVolume(0.0)
+                        }
+                        hapticsManager.toggleHaptic()
+                    }
+                }
+
+                gamepad.leftShoulder.valueChangedHandler = { [self] (button, value, pressed) in
+                    if pressed {
+                        print("🎮 L button pressed - toggling sound")
+                        isSoundEnabled.toggle()
+                        if isSoundEnabled {
+                            soundManager.setVolume(1.0)
+                        } else {
+                            soundManager.setVolume(0.0)
+                        }
+                        hapticsManager.toggleHaptic()
+                    }
+                }
+
+
+                
+                
+            }
+        }
+    }
+
+    // Add this helper function for stick direction
+    private func getStickDirection(x: Float, y: Float, threshold: Float) -> Direction {
+        if abs(x) < threshold && abs(y) < threshold {
+            return .none
+        }
+        
+        if abs(x) > abs(y) {
+            return x > threshold ? .right : (x < -threshold ? .left : .none)
+        } else {
+            return y > threshold ? .up : (y < -threshold ? .down : .none)
         }
     }
     
@@ -567,6 +747,7 @@ struct GameView: View {
             .onAppear {
                 print("🐍 DEBUG: View appeared")
                 startGame(with: layout)
+                setupController(maxX: layout.maxX, maxY: layout.maxY, squareSize: layout.squareSize)
             }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 20)
