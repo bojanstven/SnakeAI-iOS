@@ -28,7 +28,7 @@ struct DataManagementView: View {
                     Button("Reset", role: .destructive) {
                         isDeleting = true
                         Task {
-                            await scoreManager.deleteData(.highScoreOnly)
+                            scoreManager.deleteData(.highScoreOnly)
                             isDeleting = false
                         }
                     }
@@ -52,7 +52,7 @@ struct DataManagementView: View {
                     Button("Reset All", role: .destructive) {
                         isDeleting = true
                         Task {
-                            await scoreManager.deleteData(.allStats)
+                            scoreManager.deleteData(.allStats)
                             isDeleting = false
                         }
                     }

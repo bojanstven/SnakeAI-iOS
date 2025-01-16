@@ -14,11 +14,15 @@ struct SettingsView: View {
     @Binding var powerUpsEnabled: Bool
     @Binding var enabledPowerUps: Set<PowerUpType>
     @Binding var isSoundEnabled: Bool
+    
+    @State private var showingHighScoreAlert = false
+    @State private var showingAllDataAlert = false
+
     let baseIntervalForGameSpeed: (Int) -> TimeInterval
     
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2"
-        return "Snake AI v\(version)"
+        return "Snake AI by Bojanstven - v\(version)"
     }
     
     init(isOpen: Binding<Bool>,
@@ -115,7 +119,10 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("AI Settings")
+                } footer: {
+                    Text("Enable to choose AI intelligence level")
                 }
+
                 
                 // Power-ups Section
                 Section {
@@ -131,7 +138,10 @@ struct SettingsView: View {
                     .tint(Color(red: 0.0, green: 0.5, blue: 0.0))
                 } header: {
                     Text("Power-ups")
+                } footer: {
+                    Text("Collect power-ups: 3× points, 2× speed, ½ speed")
                 }
+
                 
                 // Statistics Section
                 Section {
@@ -249,36 +259,48 @@ struct SettingsView: View {
         }
     }
     
-    private var dataManagementRows: some View {
-        Group {
-            Button(role: .destructive) {
-                Task {
-                    await scoreManager.deleteData(.highScoreOnly)
+
+        private var dataManagementRows: some View {
+            Group {
+                Button(role: .destructive) {
+                    showingHighScoreAlert = true
+                } label: {
+                    HStack {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 22))
+                            .frame(width: 30)
+                        Text("Reset High Score")
+                    }
                 }
-            } label: {
-                HStack {
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 22))
-                        .frame(width: 30)
-                    Text("Reset High Score")
+                .alert("Reset High Score?", isPresented: $showingHighScoreAlert) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Reset", role: .destructive) {
+                        scoreManager.deleteData(.highScoreOnly)
+                    }
+                } message: {
+                    Text("This will permanently delete your current high score of \(scoreManager.highScore). This action cannot be undone.")
                 }
-            }
-            
-            Button(role: .destructive) {
-                Task {
-                    await scoreManager.deleteData(.allStats)
+                
+                Button(role: .destructive) {
+                    showingAllDataAlert = true
+                } label: {
+                    HStack {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 22))
+                            .frame(width: 30)
+                        Text("Reset All Data")
+                    }
                 }
-            } label: {
-                HStack {
-                    Image(systemName: "trash.fill")
-                        .font(.system(size: 22))
-                        .frame(width: 30)
-                    Text("Reset All Data")
+                .alert("Reset All Data?", isPresented: $showingAllDataAlert) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Reset All", role: .destructive) {
+                        scoreManager.deleteData(.allStats)
+                    }
+                } message: {
+                    Text("This will permanently delete all your game data including high score, total games played, and playtime statistics. This action cannot be undone.")
                 }
             }
         }
-    }
-    
     private func formatTime(_ timeInterval: TimeInterval) -> String {
         let hours = Int(timeInterval) / 3600
         let minutes = Int(timeInterval) / 60 % 60

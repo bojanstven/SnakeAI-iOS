@@ -2,99 +2,109 @@ import AVFoundation
 import Foundation
 
 class SoundManager: ObservableObject {
-    private var eatFoodSound: AVAudioPlayer?
-    private var gameOverSound: AVAudioPlayer?
-    private var gamePauseSound: AVAudioPlayer?
-    private var gameUnpauseSound: AVAudioPlayer?
-    private var autoplayOnSound: AVAudioPlayer?
-    private var autoplayOffSound: AVAudioPlayer?
-    private var wallSwitchOnSound: AVAudioPlayer?
-    private var wallSwitchOffSound: AVAudioPlayer?
+    private var currentPlayer: AVAudioPlayer?
+    private var sounds: [String: AVAudioPlayer] = [:]
+    private let audioSession = AVAudioSession.sharedInstance()
     
     init() {
-        setupSounds()
+        configureAudioSession()
+        loadSounds()
     }
     
-    private func setupSounds() {
-        eatFoodSound = loadSound(fileName: "eat-food")
-        gameOverSound = loadSound(fileName: "game-over")
-        gamePauseSound = loadSound(fileName: "game-pause")
-        gameUnpauseSound = loadSound(fileName: "game-unpause")
-        autoplayOnSound = loadSound(fileName: "autoplay-on")
-        autoplayOffSound = loadSound(fileName: "autoplay-off")
-        wallSwitchOnSound = loadSound(fileName: "wall-switch-on")
-        wallSwitchOffSound = loadSound(fileName: "wall-switch-off")
+    private func configureAudioSession() {
+        do {
+            // Use playback category with mix with others option
+            try audioSession.setCategory(.playback, options: [.mixWithOthers, .duckOthers])
+            
+            // Set preferred sample rate and I/O buffer duration
+            try audioSession.setPreferredSampleRate(44100.0)
+            try audioSession.setPreferredIOBufferDuration(0.005)
+            
+            // Activate the session
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("🐍 Audio Session Config Error: \(error.localizedDescription)")
+        }
+    }
+    
+    private func loadSounds() {
+        let soundNames = [
+            "eat-food",
+            "game-over",
+            "game-pause",
+            "game-unpause",
+            "autoplay-on",
+            "autoplay-off",
+            "wall-switch-on",
+            "wall-switch-off"
+        ]
+        
+        for name in soundNames {
+            if let url = Bundle.main.url(forResource: name, withExtension: "mp3") {
+                do {
+                    let player = try AVAudioPlayer(contentsOf: url)
+                    // Configure player
+                    player.prepareToPlay()
+                    player.numberOfLoops = 0
+                    player.volume = 1.0
+                    player.enableRate = false  // Disable rate adjustment
+                    
+                    sounds[name] = player
+                } catch {
+                    print("🐍 Failed to load sound \(name): \(error.localizedDescription)")
+                }
+            }
+        }
     }
     
     func setVolume(_ volume: Float) {
-            eatFoodSound?.setVolume(volume, fadeDuration: 0)
-            gameOverSound?.setVolume(volume, fadeDuration: 0)
-            gamePauseSound?.setVolume(volume, fadeDuration: 0)
-            gameUnpauseSound?.setVolume(volume, fadeDuration: 0)
-            autoplayOnSound?.setVolume(volume, fadeDuration: 0)
-            autoplayOffSound?.setVolume(volume, fadeDuration: 0)
-            wallSwitchOnSound?.setVolume(volume, fadeDuration: 0)
-            wallSwitchOffSound?.setVolume(volume, fadeDuration: 0)
-        }
-
-    
-    private func loadSound(fileName: String) -> AVAudioPlayer? {
-        if let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") {
-            do {
-                let player = try AVAudioPlayer(contentsOf: url)
-                player.numberOfLoops = 0  // Ensure no looping
-                player.prepareToPlay()
-                return player
-            } catch {
-                print("🐍 Error loading sound \(fileName): \(error.localizedDescription)")
-            }
-        }
-        return nil
+        sounds.values.forEach { $0.volume = volume }
     }
     
-    func playEatFood() {
-        eatFoodSound?.play()
+    private func playSound(_ name: String) {
+        guard let player = sounds[name] else { return }
+        
+        // Stop any currently playing sound
+        stopAllSounds()
+        
+        // Ensure audio session is active before playing
+        do {
+            if !audioSession.isOtherAudioPlaying {
+                try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            }
+        } catch {
+            print("🐍 Failed to activate audio session: \(error.localizedDescription)")
+            return
+        }
+        
+        currentPlayer = player
+        player.currentTime = 0
+        player.play()
     }
     
     func stopAllSounds() {
-        eatFoodSound?.stop()
-        gameOverSound?.stop()
-        gamePauseSound?.stop()
-        gameUnpauseSound?.stop()
-        autoplayOnSound?.stop()
-        autoplayOffSound?.stop()
-        wallSwitchOnSound?.stop()
-        wallSwitchOffSound?.stop()
+        sounds.values.forEach { player in
+            player.stop()
+            player.currentTime = 0
+        }
+        currentPlayer = nil
     }
     
+    func playEatFood() { playSound("eat-food") }
+    func playGameOver() { playSound("game-over") }
+    func playGamePause() { playSound("game-pause") }
+    func playGameUnpause() { playSound("game-unpause") }
+    func playAutoplayOn() { playSound("autoplay-on") }
+    func playAutoplayOff() { playSound("autoplay-off") }
+    func playWallSwitchOn() { playSound("wall-switch-on") }
+    func playWallSwitchOff() { playSound("wall-switch-off") }
     
-    func playGameOver() {
-        stopAllSounds()  // Stop any playing sounds first
-        gameOverSound?.play()
+    deinit {
+        stopAllSounds()
+        do {
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("🐍 Failed to deactivate audio session: \(error.localizedDescription)")
+        }
     }
-    
-    func playGamePause() {
-        gamePauseSound?.play()
-    }
-    
-    func playGameUnpause() {
-        gameUnpauseSound?.play()
-    }
-    
-    func playAutoplayOn() {
-        autoplayOnSound?.play()
-    }
-    
-    func playAutoplayOff() {
-        autoplayOffSound?.play()
-    }
-    
-    func playWallSwitchOn() {
-        wallSwitchOnSound?.play()
-    }
-    
-    func playWallSwitchOff() {
-        wallSwitchOffSound?.play()
-    }
-    
 }
