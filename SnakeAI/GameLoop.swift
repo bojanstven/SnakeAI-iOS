@@ -8,19 +8,17 @@ class GameLoop: ObservableObject {
     private let maxAccumulatedTime: CFTimeInterval = 0.2  // Prevent spiral of death
     
     var frameCallback: (() -> Void)?
-    
-    // Removed the didSet observer that was causing the restarts
     var updateInterval: TimeInterval = 0.033  // About 30 updates per second
-
     
     init() {}
     
     func start() {
         lastUpdateTime = CACurrentMediaTime()
+        accumulatedTime = 0  // Reset accumulated time on start
         displayLink = CADisplayLink(target: self, selector: #selector(frame))
-        displayLink?.preferredFramesPerSecond = 60  // Keep this for smooth rendering
+        displayLink?.preferredFramesPerSecond = 60
         displayLink?.add(to: .main, forMode: .common)
-        print("🐍 Game loop started")
+        print("🐍 Game loop started with interval: \(updateInterval)")
     }
     
     func stop() {
@@ -37,13 +35,16 @@ class GameLoop: ObservableObject {
         
         accumulatedTime += deltaTime
         
-        if accumulatedTime > maxAccumulatedTime {
-            accumulatedTime = maxAccumulatedTime
-        }
-        
-        if accumulatedTime >= updateInterval {  // Only update when enough time has passed
+        // Handle multiple updates if needed
+        while accumulatedTime >= updateInterval {
             frameCallback?()
-            accumulatedTime = 0  // Reset accumulated time after update
+            accumulatedTime -= updateInterval
+            
+            // Prevent excessive catch-up
+            if accumulatedTime > maxAccumulatedTime {
+                accumulatedTime = 0
+                break
+            }
         }
     }
 }

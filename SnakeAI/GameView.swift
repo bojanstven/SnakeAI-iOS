@@ -327,6 +327,7 @@ struct GameView: View {
     private func endGame() {
         gameLoop.stop()
         isGameOver = true
+        soundManager.stopAllSounds()
         hapticsManager.gameOverHaptic()
         soundManager.playGameOver()
         scoreManager.endGame()
@@ -537,7 +538,7 @@ struct GameView: View {
         }
     }
 
-    // Add this helper function for stick direction
+    // helper function for stick direction
     private func getStickDirection(x: Float, y: Float, threshold: Float) -> Direction {
         if abs(x) < threshold && abs(y) < threshold {
             return .none
@@ -711,7 +712,8 @@ struct GameView: View {
                     isPaused: $isPaused,
                     isSoundEnabled: $isSoundEnabled,
                     hapticsManager: hapticsManager,
-                    soundManager: soundManager
+                    soundManager: soundManager,
+                    gameLoop: gameLoop
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
@@ -723,21 +725,22 @@ struct GameView: View {
                     }
                 }
             }
+            
             .sheet(isPresented: $settingsOpen) {
                 SettingsView(
                     isOpen: $settingsOpen,
                     wallsOn: $wallsOn,
                     autoplayEnabled: $autoplayEnabled,
-                    isSoundEnabled: $isSoundEnabled,
+                    isPaused: $isPaused,
                     snakeAI: snakeAI,
                     hapticsManager: hapticsManager,
-                    isPaused: $isPaused,
-                    isGameOver: $isGameOver,
                     gameLoop: gameLoop,
-                    gameSpeed: $gameSpeed,
                     scoreManager: scoreManager,
+                    isGameOver: $isGameOver,
+                    gameSpeed: $gameSpeed,
                     powerUpsEnabled: $powerUpsEnabled,
                     enabledPowerUps: $enabledPowerUps,
+                    isSoundEnabled: $isSoundEnabled,
                     baseIntervalForGameSpeed: baseIntervalForGameSpeed
                 )
             }
@@ -782,6 +785,7 @@ struct GameControlButtons: View {
     let isSoundEnabled: Binding<Bool>
     let hapticsManager: HapticsManager
     let soundManager: SoundManager
+    let gameLoop: GameLoop
     
     var body: some View {
         HStack(spacing: 20) {
@@ -831,7 +835,7 @@ struct GameControlButtons: View {
                 Image(systemName: autoplayEnabled.wrappedValue ? "steeringwheel.and.hands" : "steeringwheel")
                     .font(.system(size: 37))
                     .foregroundColor(autoplayEnabled.wrappedValue ? .white : .black)
-                    .frame(width: 50, height: 50)  // Fixed width to accommodate widest icon
+                    .frame(width: 50, height: 50)
                     .frame(minWidth: 50, minHeight: 50)
                     .clipShape(Circle())
             }
@@ -841,6 +845,7 @@ struct GameControlButtons: View {
                 hapticsManager.toggleHaptic()
                 if settingsOpen.wrappedValue {
                     isPaused.wrappedValue = true
+                    gameLoop.stop()
                 }
             }) {
                 Image(systemName: "gearshape.fill")

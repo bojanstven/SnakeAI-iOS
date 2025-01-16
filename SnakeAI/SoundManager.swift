@@ -42,6 +42,7 @@ class SoundManager: ObservableObject {
         if let url = Bundle.main.url(forResource: fileName, withExtension: "mp3") {
             do {
                 let player = try AVAudioPlayer(contentsOf: url)
+                player.numberOfLoops = 0  // Ensure no looping
                 player.prepareToPlay()
                 return player
             } catch {
@@ -55,7 +56,20 @@ class SoundManager: ObservableObject {
         eatFoodSound?.play()
     }
     
+    func stopAllSounds() {
+        eatFoodSound?.stop()
+        gameOverSound?.stop()
+        gamePauseSound?.stop()
+        gameUnpauseSound?.stop()
+        autoplayOnSound?.stop()
+        autoplayOffSound?.stop()
+        wallSwitchOnSound?.stop()
+        wallSwitchOffSound?.stop()
+    }
+    
+    
     func playGameOver() {
+        stopAllSounds()  // Stop any playing sounds first
         gameOverSound?.play()
     }
     
