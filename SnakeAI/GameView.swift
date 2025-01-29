@@ -112,6 +112,11 @@ struct GameView: View {
         isGameOver = false
         isPaused = false
         
+        // Clear all power-ups
+        powerUpFoods.removeAll()
+        activePowerUps.removeAll()
+
+        
         score = 0
         direction = .right
         lastDirection = .right
@@ -159,7 +164,7 @@ struct GameView: View {
             )
         } while snakePositions.contains(foodPosition) ||
         powerUpFoods.contains(where: { $0.position == foodPosition })
-
+        
         // Power-up generation
         if powerUpsEnabled && !enabledPowerUps.isEmpty {
             // 20% chance to spawn a power-up
@@ -167,23 +172,29 @@ struct GameView: View {
                 let availablePowerUps = Array(enabledPowerUps)
                 let randomPowerUp = availablePowerUps.randomElement()!
                 
-                var newPowerUpPosition: Position
-                repeat {
-                    newPowerUpPosition = Position(
-                        x: Int.random(in: 0..<maxX),
-                        y: Int.random(in: topSafeRows..<maxY)  // Also avoid Dynamic Island for power-ups
-                    )
-                } while snakePositions.contains(newPowerUpPosition) ||
-                powerUpFoods.contains(where: { $0.position == newPowerUpPosition }) ||
-                newPowerUpPosition == foodPosition
+                // Count existing power-ups of this type
+                let existingCount = powerUpFoods.filter { $0.type == randomPowerUp }.count
                 
-                powerUpFoods.append(PowerUpFood(
-                    position: newPowerUpPosition,
-                    type: randomPowerUp,
-                    createdAt: Date()
-                ))
-                
-                print("🐍 Power-up spawned: \(randomPowerUp.rawValue) at position: (\(newPowerUpPosition.x), \(newPowerUpPosition.y))")
+                // Only spawn if less than 2 of this type exist
+                if existingCount < 2 {
+                    var newPowerUpPosition: Position
+                    repeat {
+                        newPowerUpPosition = Position(
+                            x: Int.random(in: 0..<maxX),
+                            y: Int.random(in: topSafeRows..<maxY)
+                        )
+                    } while snakePositions.contains(newPowerUpPosition) ||
+                    powerUpFoods.contains(where: { $0.position == newPowerUpPosition }) ||
+                    newPowerUpPosition == foodPosition
+                    
+                    powerUpFoods.append(PowerUpFood(
+                        position: newPowerUpPosition,
+                        type: randomPowerUp,
+                        createdAt: Date()
+                    ))
+                    
+                    print("🐍 Power-up spawned: \(randomPowerUp.rawValue) at position: (\(newPowerUpPosition.x), \(newPowerUpPosition.y))")
+                }
             }
         }
     }
@@ -879,7 +890,7 @@ struct ScoreHeader: View {
             Text("\(score)")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
+                .foregroundColor(.black)  // Changed from green to black
         }
         .frame(height: geometry.size.height * 0.03)
         .padding(.horizontal, geometry.size.width * 0.02)

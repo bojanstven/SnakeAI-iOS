@@ -22,7 +22,7 @@ struct AnimatedScoreView: View {
                 Text("\(score)")
                     .font(.title)
                     .bold()
-                    .foregroundColor(Color(red: 0.0, green: 0.5, blue: 0.0))
+                    .foregroundColor(.black)  // Changed from green to black
                     .scaleEffect(scoreScale)
                     .offset(y: -geo.size.height * 0.25)
             }
