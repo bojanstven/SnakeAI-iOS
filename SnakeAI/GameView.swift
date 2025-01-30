@@ -25,6 +25,19 @@ enum Direction {
     }
 }
 
+
+extension UIDevice {
+    var hasNotch: Bool {
+        guard #available(iOS 13.0, *) else { return false }
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            return window.safeAreaInsets.top > 20
+        }
+        return false
+    }
+}
+
+
 struct GameView: View {
     @StateObject private var hapticsManager = HapticsManager()
     @StateObject private var scoreManager = ScoreManager()
@@ -877,28 +890,33 @@ struct ScoreHeader: View {
     let score: Int
     let highScore: Int
     
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+    
     var body: some View {
-        HStack(spacing: geometry.size.width * 0.02) {
-            AnimatedScoreView(
-                score: highScore,
-                isHighScore: true
-            )
-            .frame(maxHeight: .infinity)
+        HStack {
+            // Left score (high score)
+            HStack {
+                Image(systemName: "crown.fill")
+                    .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))
+                Text("\(highScore)")
+                    .foregroundColor(.black)
+            }
+            .offset(y: isIPad ? 20 : -44)  // Higher offset for iPhone
             
             Spacer()
             
+            // Right score (current score)
             Text("\(score)")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.black)  // Changed from green to black
+                .foregroundColor(.black)
+                .offset(y: isIPad ? 20 : -44)  // Higher offset for iPhone
         }
-        .frame(height: geometry.size.height * 0.03)
-        .padding(.horizontal, geometry.size.width * 0.02)
-        .padding(.bottom, geometry.size.height * 0.007)
+        .font(.title)
+        .bold()
+        .padding(.horizontal)
     }
 }
-    
-
 
 
 struct DebugView: View {
