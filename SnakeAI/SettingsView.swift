@@ -100,29 +100,48 @@ struct SettingsView: View {
                     }
                     .tint(Color(red: 0.0, green: 0.5, blue: 0.0))
                     
-                    if autoplayEnabled {
-                        HStack {
-                            Image(systemName: getAILevelIcon(snakeAI.currentLevel))
-                                .font(.system(size: 22))
-                                .foregroundColor(.primary)
-                                .frame(width: 30)
+                    // AI Level selection - always visible, greyed out when disabled
+                    HStack(alignment: .top, spacing: 12) {
+                        // Simple gauge icon that switches immediately (no animation)
+                        Image(systemName: getAILevelIcon(snakeAI.currentLevel))
+                            .font(.system(size: 22))
+                            .foregroundColor(autoplayEnabled ? .primary : .secondary)
+                            .frame(width: 30)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Title at same level as gauge icon
+                            Text("AI Intelligence Level")
+                                .font(.body)
+                                .foregroundColor(autoplayEnabled ? .primary : .secondary)
                             
+                            // Segmented control - always visible but disabled when AI off
                             Picker("AI Level", selection: Binding(
                                 get: { snakeAI.currentLevel },
-                                set: { snakeAI.changeLevel(to: $0) }
+                                    set: {
+                                        hapticsManager.toggleHaptic()  // Add this line
+                                        snakeAI.changeLevel(to: $0)
+                                    }
                             )) {
                                 Text("Basic").tag(AILevel.basic)
                                 Text("Smart").tag(AILevel.smart)
                                 Text("Genius").tag(AILevel.genius)
                             }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .frame(height: 44)
+                            .disabled(!autoplayEnabled)
+                            .opacity(autoplayEnabled ? 1.0 : 0.6)
                         }
                     }
                 } header: {
                     Text("AI Settings")
                 } footer: {
-                    Text("Enable to choose AI intelligence level")
+                    if autoplayEnabled {
+                        Text("Basic: Simple pathfinding • Smart: Collision avoidance • Genius: Advanced AI algorithm")
+                    } else {
+                        Text("Enable AI autopilot to choose intelligence level")
+                    }
                 }
-
+                
                 
                 // Power-ups Section
                 Section {
@@ -205,9 +224,9 @@ struct SettingsView: View {
     
     private func getAILevelIcon(_ level: AILevel) -> String {
         switch level {
-        case .basic: return "lightbulb.fill"
-        case .smart: return "lightbulb.min.fill"
-        case .genius: return "lightbulb.max.fill"
+        case .basic: return "gauge.low"
+        case .smart: return "gauge.medium"
+        case .genius: return "gauge.high"
         }
     }
     

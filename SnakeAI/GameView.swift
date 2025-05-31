@@ -42,7 +42,7 @@ struct GameView: View {
     @StateObject private var hapticsManager = HapticsManager()
     @StateObject private var scoreManager = ScoreManager()
     @StateObject private var gameLoop = GameLoop()
-    @StateObject private var snakeAI = SnakeAI(level: .basic)
+    @StateObject private var snakeAI = SnakeAI(level: .smart)
     @StateObject private var soundManager = SoundManager()
     
     
@@ -85,35 +85,98 @@ struct GameView: View {
     }
 
     
-    private func calculateLayout(for geometry: GeometryProxy) -> (squareSize: CGFloat, gameHeight: CGFloat, maxX: Int, maxY: Int) {
+    private func calculateLayout(for geometry: GeometryProxy) -> (squareSize: CGFloat, gameHeight: CGFloat, maxX: Int, maxY: Int, offsetX: CGFloat, offsetY: CGFloat) {
         // Get the safe area insets
         let safeAreaInsets = getSafeAreaInsets()
         
-        // Get total screen dimensions
+        // Get total screen dimensions (ignoring safe area for edge-to-edge coverage)
         let totalWidth = geometry.size.width
         let totalHeight = geometry.size.height + safeAreaInsets.top + safeAreaInsets.bottom
         
-        // We want at least 20 columns, calculate ideal square size
-        let idealSquareSize = min(totalWidth / 20, totalHeight / 44)
+        // Mathematical Perfect Division Approach
+        let minTileSize: CGFloat = 15.0
+        let maxTileSize: CGFloat = 25.0
+        let squareTolerance: CGFloat = 0.5
         
-        // Calculate actual number of squares that will fit perfectly
-        let columns = Int(floor(totalWidth / idealSquareSize))
-        let rows = Int(floor(totalHeight / idealSquareSize))
+        var bestSolution: (cols: Int, rows: Int, tileW: CGFloat, tileH: CGFloat, avgSize: CGFloat, difference: CGFloat)? = nil
+        var maxAvgTileSize: CGFloat = 0
         
-        // Recalculate square size to fill screen perfectly
-        let squareSize = min(totalWidth / CGFloat(columns), totalHeight / CGFloat(rows))
+        // Test tile sizes in 0.1pt increments for precision
+        var testSize = minTileSize
+        while testSize <= maxTileSize {
+            let cols = Int(round(totalWidth / testSize))
+            let rows = Int(round(totalHeight / testSize))
+            
+            let actualTileW = totalWidth / CGFloat(cols)
+            let actualTileH = totalHeight / CGFloat(rows)
+            let tileDifference = abs(actualTileW - actualTileH)
+            
+            if tileDifference <= squareTolerance {
+                let avgTileSize = (actualTileW + actualTileH) / 2
                 
-        return (
-            squareSize: squareSize,
-            gameHeight: totalHeight,
-            maxX: columns,
-            maxY: rows
-
-        )
+                if avgTileSize > maxAvgTileSize {
+                    maxAvgTileSize = avgTileSize
+                    bestSolution = (
+                        cols: cols,
+                        rows: rows,
+                        tileW: actualTileW,
+                        tileH: actualTileH,
+                        avgSize: avgTileSize,
+                        difference: tileDifference
+                    )
+                }
+            }
+            testSize += 0.1
         }
+        
+        guard let solution = bestSolution else {
+            print("🐍 WARNING: No perfect square solution found, using fallback")
+            let fallbackSize: CGFloat = 20.0
+            let cols = Int(totalWidth / fallbackSize)
+            let rows = Int(totalHeight / fallbackSize)
+            return (
+                squareSize: fallbackSize,
+                gameHeight: totalHeight,
+                maxX: cols,
+                maxY: rows,
+                offsetX: 0,
+                offsetY: 0
+            )
+        }
+        
+        // Use the average size to maintain perfect squares
+        let finalSquareSize = solution.avgSize
+        
+        // Calculate the total used space by the grid
+        let usedWidth = CGFloat(solution.cols) * finalSquareSize
+        let usedHeight = CGFloat(solution.rows) * finalSquareSize
+        
+        // Calculate remaining space and center the grid
+        let remainingWidth = totalWidth - usedWidth
+        let remainingHeight = totalHeight - usedHeight
+        let offsetX = remainingWidth / 2
+        let offsetY = remainingHeight / 2
+        
+        print("🐍 Centered Perfect Grid Solution:")
+        print("   Screen: \(Int(totalWidth))×\(Int(totalHeight))pt")
+        print("   Grid: \(solution.cols)×\(solution.rows) (\(solution.cols * solution.rows) tiles)")
+        print("   Tile: \(String(format: "%.2f", finalSquareSize))×\(String(format: "%.2f", finalSquareSize))pt (perfect squares)")
+        print("   Used space: \(String(format: "%.1f", usedWidth))×\(String(format: "%.1f", usedHeight))pt")
+        print("   Margins: \(String(format: "%.1f", offsetX))pt left/right, \(String(format: "%.1f", offsetY))pt top/bottom")
+        print("   Dark green margins will fill remaining space")
+        
+        return (
+            squareSize: finalSquareSize,
+            gameHeight: totalHeight,
+            maxX: solution.cols,
+            maxY: solution.rows,
+            offsetX: offsetX,
+            offsetY: offsetY
+        )
+    }
 
     
-    private func startGame(with layout: (squareSize: CGFloat, gameHeight: CGFloat, maxX: Int, maxY: Int)) {
+    private func startGame(with layout: (squareSize: CGFloat, gameHeight: CGFloat, maxX: Int, maxY: Int, offsetX: CGFloat, offsetY: CGFloat)) {
         // Print debug info only when game starts
         print("🐍 DEBUG: Layout Calculations")
         print("Total Height: \(layout.gameHeight)")
@@ -458,7 +521,8 @@ struct GameView: View {
                     if pressed {
                         if isGameOver {
                             print("🎮 A button pressed - restarting game")
-                            startGame(with: (squareSize: squareSize, gameHeight: 0, maxX: maxX, maxY: maxY))
+                            // Need to recalculate layout here
+                            // This will need to be handled differently
                         } else {
                             print("🎮 A button pressed - toggling pause")
                             togglePause(maxX: maxX, maxY: maxY)
@@ -470,7 +534,8 @@ struct GameView: View {
                     if pressed {
                         if isGameOver {
                             print("🎮 B button pressed - restarting game")
-                            startGame(with: (squareSize: squareSize, gameHeight: 0, maxX: maxX, maxY: maxY))
+                            // Need to recalculate layout here
+                            // This will need to be handled differently
                         } else {
                             print("🎮 B button pressed - toggling pause")
                             togglePause(maxX: maxX, maxY: maxY)
@@ -554,10 +619,6 @@ struct GameView: View {
                         hapticsManager.toggleHaptic()
                     }
                 }
-
-
-                
-                
             }
         }
     }
@@ -579,28 +640,28 @@ struct GameView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let layout = calculateLayout(for: geometry)
+            let (squareSize, gameHeight, maxX, maxY, offsetX, offsetY) = calculateLayout(for: geometry)
             let buttonSize = min(geometry.size.width * 0.15, 50.0)
             
             ZStack {
-                // Background color
-                Color(red: 0.55, green: 0.65, blue: 0.55)
+                // Full screen dark green background (matches dark tile color)
+                Color(red: 0.51, green: 0.61, blue: 0.51)
                     .ignoresSafeArea()
 
-                // Game grid
+                // Game grid - centered with offsets
                 GeometryReader { proxy in
-                    ForEach(0..<layout.maxY, id: \.self) { row in
-                        ForEach(0..<layout.maxX, id: \.self) { column in
+                    ForEach(0..<maxY, id: \.self) { row in
+                        ForEach(0..<maxX, id: \.self) { column in
                             if (row + column).isMultiple(of: 2) {
                                 Rectangle()
-                                    .fill(Color(red: 0.51, green: 0.61, blue: 0.51))
+                                    .fill(Color(red: 0.55, green: 0.65, blue: 0.55))
                                     .frame(
-                                        width: layout.squareSize,
-                                        height: layout.squareSize
+                                        width: squareSize,
+                                        height: squareSize
                                     )
                                     .position(
-                                        x: layout.squareSize * (CGFloat(column) + 0.5),
-                                        y: layout.squareSize * (CGFloat(row) + 0.5)
+                                        x: offsetX + squareSize * (CGFloat(column) + 0.5),
+                                        y: offsetY + squareSize * (CGFloat(row) + 0.5)
                                     )
                             }
                         }
@@ -609,7 +670,7 @@ struct GameView: View {
                 .ignoresSafeArea()
 
                     
-                // 4. Snake (now rendered last/on top)
+                // Snake (now rendered last/on top)
                 GeometryReader { proxy in
                     ForEach(0..<snakePositions.count, id: \.self) { index in
                         Rectangle()
@@ -618,38 +679,38 @@ struct GameView: View {
                                   : Color(red: 0.0, green: 0.5, blue: 0.0)  // Body color
                             )
                             .frame(
-                                width: layout.squareSize - 1,
-                                height: layout.squareSize - 1
+                                width: squareSize - 1,
+                                height: squareSize - 1
                             )
                             .position(
-                                x: layout.squareSize * (CGFloat(snakePositions[index].x) + 0.5),
-                                y: layout.squareSize * (CGFloat(snakePositions[index].y) + 0.5)
+                                x: offsetX + squareSize * (CGFloat(snakePositions[index].x) + 0.5),
+                                y: offsetY + squareSize * (CGFloat(snakePositions[index].y) + 0.5)
                             )
                     }
                 }
                 .ignoresSafeArea()
 
                 
-                // 3. Food and Power-ups
+                // Food and Power-ups
                 GeometryReader { proxy in
                     // Regular food
                     Rectangle()
                         .fill(Color(red: 0.8, green: 0.0, blue: 0.0))
                         .frame(
-                            width: layout.squareSize - 1,
-                            height: layout.squareSize - 1
+                            width: squareSize - 1,
+                            height: squareSize - 1
                         )
                         .position(
-                            x: layout.squareSize * (CGFloat(foodPosition.x) + 0.5),
-                            y: layout.squareSize * (CGFloat(foodPosition.y) + 0.5)
+                            x: offsetX + squareSize * (CGFloat(foodPosition.x) + 0.5),
+                            y: offsetY + squareSize * (CGFloat(foodPosition.y) + 0.5)
                         )
                     
                     // Power-up foods
                     ForEach(powerUpFoods, id: \.position) { powerUp in
-                        PowerUpFoodView(powerUp: powerUp, size: layout.squareSize)
+                        PowerUpFoodView(powerUp: powerUp, size: squareSize)
                             .position(
-                                x: layout.squareSize * (CGFloat(powerUp.position.x) + 0.5),
-                                y: layout.squareSize * (CGFloat(powerUp.position.y) + 0.5)
+                                x: offsetX + squareSize * (CGFloat(powerUp.position.x) + 0.5),
+                                y: offsetY + squareSize * (CGFloat(powerUp.position.y) + 0.5)
                             )
                     }
                 }
@@ -686,7 +747,9 @@ struct GameView: View {
                             .foregroundColor(.red)
                             .transition(.scale)
                         
-                        Button(action: { startGame(with: layout) }) {
+                        Button(action: {
+                            startGame(with: (squareSize: squareSize, gameHeight: gameHeight, maxX: maxX, maxY: maxY, offsetX: offsetX, offsetY: offsetY))
+                        }) {
                             Text("Restart")
                                 .font(.title2)
                                 .foregroundColor(.white)
@@ -713,7 +776,7 @@ struct GameView: View {
                             .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.2))
                             .transition(.scale)
                         
-                        Button(action: { togglePause(maxX: layout.maxX, maxY: layout.maxY) }) {
+                        Button(action: { togglePause(maxX: maxX, maxY: maxY) }) {
                             Text("Resume")
                                 .font(.title2)
                                 .foregroundColor(.white)
@@ -745,7 +808,7 @@ struct GameView: View {
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 if newPhase == .inactive || newPhase == .background {
                     if !isPaused && !isGameOver {
-                        togglePause(maxX: layout.maxX, maxY: layout.maxY)
+                        togglePause(maxX: maxX, maxY: maxY)
                     }
                 }
             }
@@ -773,30 +836,26 @@ struct GameView: View {
             
             .onAppear {
                 print("🐍 DEBUG: View appeared")
-                startGame(with: layout)
-                setupController(maxX: layout.maxX, maxY: layout.maxY, squareSize: layout.squareSize)
+                startGame(with: (squareSize: squareSize, gameHeight: gameHeight, maxX: maxX, maxY: maxY, offsetX: offsetX, offsetY: offsetY))
+                setupController(maxX: maxX, maxY: maxY, squareSize: squareSize)
             }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 20)
                     .onEnded { gesture in
-                        handleSwipe(gesture: gesture, maxX: layout.maxX, maxY: layout.maxY, squareSize: layout.squareSize)
+                        handleSwipe(gesture: gesture, maxX: maxX, maxY: maxY, squareSize: squareSize)
                     }
             )
             .gesture(
                 TapGesture()
                     .onEnded { _ in
                         if !isGameOver && !settingsOpen {
-                            togglePause(maxX: layout.maxX, maxY: layout.maxY)
+                            togglePause(maxX: maxX, maxY: maxY)
                             
                         }
                     }
             )
         }
     }
-    
-    
-    
-    
 }
     
     
@@ -936,4 +995,3 @@ struct DebugView: View {
     #Preview {
         GameView()
     }
-
