@@ -55,17 +55,14 @@ struct GameView: View {
     @State private var lastDirection = Direction.right
     @State private var geometry: GeometryProxy?
 
-    
-    @State private var wallsOn = false
-    @State private var autoplayEnabled = false
     @State private var settingsOpen = false
     @State private var isInitialized = false
-    @State private var isSoundEnabled = true
-    
-    
-    
-    @State private var gameSpeed: Int = 2  // Default middle speed
-    
+
+    @AppStorage("isSoundEnabled") private var isSoundEnabled = true
+    @AppStorage("wallsOn") private var wallsOn = false
+    @AppStorage("autoplayEnabled") private var autoplayEnabled = false
+    @AppStorage("gameSpeed") private var gameSpeed: Int = 2
+
     @Environment(\.scenePhase) private var scenePhase
     
     private let moveInterval: TimeInterval = 0.2
