@@ -73,6 +73,11 @@ struct GameView: View {
     @State private var activePowerUps: [ActivePowerUp] = []
     
     
+    private var needsScoreRepositioning: Bool {
+        UIDevice.current.userInterfaceIdiom == .phone &&
+        getSafeAreaInsets().top > 44
+    }
+    
     private func getSafeAreaInsets() -> UIEdgeInsets {
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let window = windowScene.windows.first {
@@ -387,13 +392,7 @@ struct GameView: View {
     
     private func toggleSound() {
         isSoundEnabled.toggle()
-        if isSoundEnabled {
-            // Re-enable sounds
-            soundManager.setVolume(1.0)
-        } else {
-            // Mute sounds
-            soundManager.setVolume(0.0)
-        }
+        soundManager.setVolume(isSoundEnabled ? 1.0 : 0.0)
         hapticsManager.toggleHaptic()
     }
     
@@ -718,9 +717,11 @@ struct GameView: View {
                 ScoreHeader(
                     geometry: geometry,
                     score: score,
-                    highScore: scoreManager.highScore
+                    highScore: scoreManager.highScore,
+                    needsRepositioning: needsScoreRepositioning
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, needsScoreRepositioning ? 0 : 0)
                 
                 // Power-up indicators
                 VStack {
@@ -827,15 +828,19 @@ struct GameView: View {
                     isSoundEnabled: $isSoundEnabled,
                     baseIntervalForGameSpeed: baseIntervalForGameSpeed
                 )
+                .presentationDetents([.fraction(0.95)])
             }
 
             
             
             .onAppear {
                 print("🐍 DEBUG: View appeared")
-                startGame(with: (squareSize: squareSize, gameHeight: gameHeight, maxX: maxX, maxY: maxY, offsetX: offsetX, offsetY: offsetY))
-                setupController(maxX: maxX, maxY: maxY, squareSize: squareSize)
+                soundManager.setVolume(isSoundEnabled ? 1.0 : 0.0)
+                let layout = calculateLayout(for: geometry)
+                startGame(with: layout)
+                setupController(maxX: layout.maxX, maxY: layout.maxY, squareSize: layout.squareSize)
             }
+            
             .simultaneousGesture(
                 DragGesture(minimumDistance: 20)
                     .onEnded { gesture in
@@ -945,35 +950,30 @@ struct ScoreHeader: View {
     let geometry: GeometryProxy
     let score: Int
     let highScore: Int
+    let needsRepositioning: Bool
     
     private var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
     }
     
     var body: some View {
-        HStack {
-            // Left score (high score)
-            HStack {
-                Image(systemName: "crown.fill")
-                    .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))
-                Text("\(highScore)")
-                    .foregroundColor(.black)
-            }
-            .offset(y: isIPad ? 20 : -44)  // Higher offset for iPhone
+        // Always center the scores, just adjust vertical position
+        VStack(spacing: 3) {
+            // High score on top
+            Text("\(highScore)")
+                .foregroundColor(.black)
+                .font(.title)
+                .bold()
             
-            Spacer()
-            
-            // Right score (current score)
+            // Current score below
             Text("\(score)")
                 .foregroundColor(.black)
-                .offset(y: isIPad ? 20 : -44)  // Higher offset for iPhone
+                .font(.title2)
+                .bold()
         }
-        .font(.title)
-        .bold()
-        .padding(.horizontal)
+        .offset(y: needsRepositioning ? 0 : (isIPad ? 20 : -10))  // Changed from -44 to -20 for SE3
     }
 }
-
 
 struct DebugView: View {
     let width: CGFloat
