@@ -964,14 +964,22 @@ struct ScoreHeader: View {
                 .foregroundColor(.black)
                 .font(.title)
                 .bold()
+                .transition(.opacity.combined(with: .scale))
+                .id(highScore)
+
             
             // Current score below
             Text("\(score)")
                 .foregroundColor(.black)
                 .font(.title2)
                 .bold()
+                .transition(.opacity.combined(with: .scale))
+                .id(score)
+
         }
-        .offset(y: needsRepositioning ? 0 : (isIPad ? 20 : -10))  // Changed from -44 to -20 for SE3
+        .offset(y: needsRepositioning ? 0 : (isIPad ? 20 : -10))
+        .animation(.spring(response: 0.5, dampingFraction: 0.4), value: score)
+        .animation(.spring(response: 0.5, dampingFraction: 0.4), value: highScore)
     }
 }
 
