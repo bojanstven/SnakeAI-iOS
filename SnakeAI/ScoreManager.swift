@@ -44,6 +44,7 @@ class ScoreManager: ObservableObject {
     func startNewGame(isAIEnabled: Bool) {
         gameStartTime = Date()
         stats.totalGamesPlayed += 1
+        Achievements.shared.checkGamesPlayed(stats.totalGamesPlayed)
         if isAIEnabled {
             stats.aiGamesPlayed += 1
         }

@@ -1,5 +1,7 @@
 import SwiftUI
 import GameController
+import GameKit
+
 
 struct Position: Equatable, Hashable {
     var x: Int
@@ -45,6 +47,7 @@ struct GameView: View {
     @StateObject private var snakeAI = SnakeAI(level: .smart)
     @StateObject private var soundManager = SoundManager()
     
+    @StateObject private var achievementManager = Achievements.shared
     
     @State private var isPaused = false
     @State private var score = 0
@@ -349,6 +352,7 @@ struct GameView: View {
             
             scoreManager.updateScores(newScore: newScore)
             score = newScore
+            achievementManager.checkScore(newScore)
             hapticsManager.foodEatenHaptic()
             
             if newScore > scoreManager.highScore {
@@ -466,6 +470,8 @@ struct GameView: View {
         let threshold: Float = 0.1
         
         for controller in controllers {
+            achievementManager.checkFirstGamepad()
+
             if let gamepad = controller.extendedGamepad {
                 // D-pad handling remains the same as it works well
                 gamepad.dpad.valueChangedHandler = { [self] (_, xValue, yValue) in
@@ -993,6 +999,7 @@ struct DebugView: View {
             .onAppear {
                 print("🐍 DEBUG: Screen dimensions - width: \(width), height: \(height)")
                 print("🐍 DEBUG: Layout dimensions - maxX: \(layout.maxX), maxY: \(layout.maxY)")
+                print("🏆 GameKit authenticated: \(GKLocalPlayer.local.isAuthenticated)")
             }
     }
 }
