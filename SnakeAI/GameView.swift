@@ -470,7 +470,6 @@ struct GameView: View {
         let threshold: Float = 0.1
         
         for controller in controllers {
-            achievementManager.checkFirstGamepad()
 
             if let gamepad = controller.extendedGamepad {
                 // D-pad handling remains the same as it works well
@@ -622,6 +621,7 @@ struct GameView: View {
                     }
                 }
             }
+            achievementManager.checkFirstGamepad()
         }
     }
 
@@ -841,6 +841,8 @@ struct GameView: View {
             
             .onAppear {
                 print("🐍 DEBUG: View appeared")
+                print("🎮 Controllers found: \(GCController.controllers().count)")
+                print("🏆 GameKit authenticated: \(GKLocalPlayer.local.isAuthenticated)")
                 soundManager.setVolume(isSoundEnabled ? 1.0 : 0.0)
                 let layout = calculateLayout(for: geometry)
                 startGame(with: layout)
@@ -989,20 +991,6 @@ struct ScoreHeader: View {
     }
 }
 
-struct DebugView: View {
-    let width: CGFloat
-    let height: CGFloat
-    let layout: (squareSize: CGFloat, gameHeight: CGFloat, maxX: Int, maxY: Int)
-    
-    var body: some View {
-        Color.clear
-            .onAppear {
-                print("🐍 DEBUG: Screen dimensions - width: \(width), height: \(height)")
-                print("🐍 DEBUG: Layout dimensions - maxX: \(layout.maxX), maxY: \(layout.maxY)")
-                print("🏆 GameKit authenticated: \(GKLocalPlayer.local.isAuthenticated)")
-            }
-    }
-}
     
     #Preview {
         GameView()
