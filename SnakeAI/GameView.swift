@@ -27,6 +27,47 @@ enum Direction {
     }
 }
 
+enum BackgroundTheme: String, CaseIterable {
+    case jungle = "Jungle Green"
+    case ocean = "Ocean Blue"
+    case desert = "Desert Brown"
+    case dark = "Dark Mode"
+    
+    var colors: (light: Color, dark: Color) {
+        switch self {
+        case .jungle:
+            return (Color(red: 0.55, green: 0.65, blue: 0.55),
+                   Color(red: 0.51, green: 0.61, blue: 0.51))
+        case .ocean:
+            return (Color(red: 0.48, green: 0.56, blue: 0.65),
+                   Color(red: 0.42, green: 0.50, blue: 0.59))
+        case .desert:
+            return (Color(red: 0.65, green: 0.55, blue: 0.48),
+                   Color(red: 0.55, green: 0.44, blue: 0.30))
+        case .dark:
+            return (Color(red: 0.15, green: 0.15, blue: 0.15),
+                   Color(red: 0.10, green: 0.10, blue: 0.10))
+        }
+    }
+    
+    var snakeColors: (head: Color, body: Color) {
+        switch self {
+        case .jungle:
+            return (Color(red: 0.0, green: 0.3, blue: 0.0),
+                   Color(red: 0.0, green: 0.5, blue: 0.0))
+        case .ocean:
+            return (Color(red: 0.0, green: 0.2, blue: 0.4),
+                   Color(red: 0.1, green: 0.3, blue: 0.5))
+        case .desert:
+            return (Color(red: 0.4, green: 0.2, blue: 0.1),
+                   Color(red: 0.5, green: 0.3, blue: 0.2))
+        case .dark:
+            return (Color(red: 0.3, green: 0.3, blue: 0.4),
+                   Color(red: 0.4, green: 0.4, blue: 0.5))
+        }
+    }
+}
+
 
 extension UIDevice {
     var hasNotch: Bool {
@@ -75,6 +116,27 @@ struct GameView: View {
     @State private var powerUpFoods: [PowerUpFood] = []
     @State private var activePowerUps: [ActivePowerUp] = []
     
+    @AppStorage("selectedBackgroundTheme") private var selectedTheme: String = BackgroundTheme.jungle.rawValue
+    @Environment(\.colorScheme) private var colorScheme
+
+    
+    
+    private var activeTheme: BackgroundTheme {
+        if colorScheme == .dark {
+            return .dark
+        } else {
+            return BackgroundTheme(rawValue: selectedTheme) ?? .jungle
+        }
+    }
+    
+    private var scoreTextColor: Color {
+        colorScheme == .dark ? Color(red: 0.8, green: 0.8, blue: 0.8) : .black
+    }
+
+    private var buttonIconColor: Color {
+        colorScheme == .dark ? Color(red: 0.4, green: 0.4, blue: 0.4) : .black
+    }
+
     
     private var needsScoreRepositioning: Bool {
         UIDevice.current.userInterfaceIdiom == .phone &&
@@ -161,14 +223,7 @@ struct GameView: View {
         let remainingHeight = totalHeight - usedHeight
         let offsetX = remainingWidth / 2
         let offsetY = remainingHeight / 2
-        
-        print("🐍 Centered Perfect Grid Solution:")
-        print("   Screen: \(Int(totalWidth))×\(Int(totalHeight))pt")
-        print("   Grid: \(solution.cols)×\(solution.rows) (\(solution.cols * solution.rows) tiles)")
-        print("   Tile: \(String(format: "%.2f", finalSquareSize))×\(String(format: "%.2f", finalSquareSize))pt (perfect squares)")
-        print("   Used space: \(String(format: "%.1f", usedWidth))×\(String(format: "%.1f", usedHeight))pt")
-        print("   Margins: \(String(format: "%.1f", offsetX))pt left/right, \(String(format: "%.1f", offsetY))pt top/bottom")
-        print("   Dark green margins will fill remaining space")
+    
         
         return (
             squareSize: finalSquareSize,
@@ -444,20 +499,16 @@ struct GameView: View {
 
     
     private func handleSwipe(gesture: DragGesture.Value, maxX: Int, maxY: Int, squareSize: CGFloat) {
-        print("🐍 Swipe detected!")
+
         if !isPaused && !isGameOver && !autoplayEnabled {
             let horizontalAmount = gesture.translation.width
             let verticalAmount = gesture.translation.height
-            
-            print("🐍 Swipe amounts - H: \(horizontalAmount), V: \(verticalAmount)")
-            
+                        
             if abs(horizontalAmount) > abs(verticalAmount) {
                 let newDirection = horizontalAmount > 0 ? Direction.right : Direction.left
-                print("🐍 New horizontal direction: \(newDirection)")
                 handleDirectionChange(newDirection, maxX: maxX, maxY: maxY, squareSize: squareSize)
             } else {
                 let newDirection = verticalAmount > 0 ? Direction.down : Direction.up
-                print("🐍 New vertical direction: \(newDirection)")
                 handleDirectionChange(newDirection, maxX: maxX, maxY: maxY, squareSize: squareSize)
             }
         } else {
@@ -646,44 +697,36 @@ struct GameView: View {
             let buttonSize = min(geometry.size.width * 0.15, 50.0)
             
             ZStack {
-                // Full screen dark green background (matches dark tile color)
-                Color(red: 0.51, green: 0.61, blue: 0.51)
+                // Full screen background (matches dark tile color)
+                activeTheme.colors.dark
                     .ignoresSafeArea()
 
-                // Game grid - centered with offsets
+                // Optimized game grid - only draw light tiles, skip dark ones
                 GeometryReader { proxy in
                     ForEach(0..<maxY, id: \.self) { row in
                         ForEach(0..<maxX, id: \.self) { column in
                             if (row + column).isMultiple(of: 2) {
                                 Rectangle()
-                                    .fill(Color(red: 0.55, green: 0.65, blue: 0.55))
-                                    .frame(
-                                        width: squareSize,
-                                        height: squareSize
-                                    )
+                                    .fill(activeTheme.colors.light)
+                                    .frame(width: squareSize, height: squareSize)
                                     .position(
                                         x: offsetX + squareSize * (CGFloat(column) + 0.5),
                                         y: offsetY + squareSize * (CGFloat(row) + 0.5)
                                     )
                             }
+                            // Skip drawing dark tiles - background shows through naturally
                         }
                     }
                 }
                 .ignoresSafeArea()
-
+                
                     
                 // Snake (now rendered last/on top)
                 GeometryReader { proxy in
                     ForEach(0..<snakePositions.count, id: \.self) { index in
                         Rectangle()
-                            .fill(index == 0
-                                  ? Color(red: 0.0, green: 0.3, blue: 0.0)  // Head color
-                                  : Color(red: 0.0, green: 0.5, blue: 0.0)  // Body color
-                            )
-                            .frame(
-                                width: squareSize - 1,
-                                height: squareSize - 1
-                            )
+                            .fill(index == 0 ? activeTheme.snakeColors.head : activeTheme.snakeColors.body)
+                            .frame(width: squareSize - 1, height: squareSize - 1)
                             .position(
                                 x: offsetX + squareSize * (CGFloat(snakePositions[index].x) + 0.5),
                                 y: offsetY + squareSize * (CGFloat(snakePositions[index].y) + 0.5)
@@ -691,7 +734,8 @@ struct GameView: View {
                     }
                 }
                 .ignoresSafeArea()
-
+                
+                
                 
                 // Food and Power-ups
                 GeometryReader { proxy in
@@ -724,7 +768,8 @@ struct GameView: View {
                     geometry: geometry,
                     score: score,
                     highScore: scoreManager.highScore,
-                    needsRepositioning: needsScoreRepositioning
+                    needsRepositioning: needsScoreRepositioning,
+                    textColor: scoreTextColor
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.top, needsScoreRepositioning ? 0 : 0)
@@ -804,7 +849,8 @@ struct GameView: View {
                     isSoundEnabled: $isSoundEnabled,
                     hapticsManager: hapticsManager,
                     soundManager: soundManager,
-                    gameLoop: gameLoop
+                    gameLoop: gameLoop,
+                    inactiveIconColor: buttonIconColor
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
@@ -832,6 +878,7 @@ struct GameView: View {
                     powerUpsEnabled: $powerUpsEnabled,
                     enabledPowerUps: $enabledPowerUps,
                     isSoundEnabled: $isSoundEnabled,
+                    selectedTheme: $selectedTheme,
                     baseIntervalForGameSpeed: baseIntervalForGameSpeed
                 )
                 .presentationDetents([.fraction(0.95)])
@@ -841,13 +888,14 @@ struct GameView: View {
             
             .onAppear {
                 print("🐍 DEBUG: View appeared")
+                selectedTheme = BackgroundTheme.jungle.rawValue
                 print("🎮 Controllers found: \(GCController.controllers().count)")
                 print("🏆 GameKit authenticated: \(GKLocalPlayer.local.isAuthenticated)")
                 soundManager.setVolume(isSoundEnabled ? 1.0 : 0.0)
                 let layout = calculateLayout(for: geometry)
                 startGame(with: layout)
                 setupController(maxX: layout.maxX, maxY: layout.maxY, squareSize: layout.squareSize)
-            }
+                }
             
             .simultaneousGesture(
                 DragGesture(minimumDistance: 20)
@@ -879,6 +927,7 @@ struct GameControlButtons: View {
     let hapticsManager: HapticsManager
     let soundManager: SoundManager
     let gameLoop: GameLoop
+    let inactiveIconColor: Color
     
     var body: some View {
         HStack(spacing: 20) {
@@ -893,7 +942,7 @@ struct GameControlButtons: View {
             }) {
                 Image(systemName: isSoundEnabled.wrappedValue ? "bell.fill" : "bell.slash.fill")
                     .font(.system(size: 37))
-                    .foregroundColor(isSoundEnabled.wrappedValue ? .white : .black)
+                    .foregroundColor(isSoundEnabled.wrappedValue ? .white : inactiveIconColor)
                     .frame(width: 50, height: 50)
                     .frame(minWidth: 50, minHeight: 50)
                     .clipShape(Circle())
@@ -910,7 +959,7 @@ struct GameControlButtons: View {
             }) {
                 Image(systemName: !wallsOn.wrappedValue ? "firewall.fill" : "shield.slash.fill")
                     .font(.system(size: 37))
-                    .foregroundColor(!wallsOn.wrappedValue ? .white : .black)
+                    .foregroundColor(!wallsOn.wrappedValue ? .white : inactiveIconColor)
                     .frame(width: 50, height: 50)
                     .frame(minWidth: 50, minHeight: 50)  // Minimum touch target size
                     .clipShape(Circle())  // Make the touch target circular
@@ -927,7 +976,7 @@ struct GameControlButtons: View {
             }) {
                 Image(systemName: autoplayEnabled.wrappedValue ? "steeringwheel.and.hands" : "steeringwheel")
                     .font(.system(size: 37))
-                    .foregroundColor(autoplayEnabled.wrappedValue ? .white : .black)
+                    .foregroundColor(autoplayEnabled.wrappedValue ? .white : inactiveIconColor)
                     .frame(width: 50, height: 50)
                     .frame(minWidth: 50, minHeight: 50)
                     .clipShape(Circle())
@@ -943,7 +992,7 @@ struct GameControlButtons: View {
             }) {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 37))
-                    .foregroundColor(settingsOpen.wrappedValue ? .white : .black)
+                    .foregroundColor(settingsOpen.wrappedValue ? .white : inactiveIconColor)
                     .frame(width: 50, height: 50)
                     .frame(minWidth: 50, minHeight: 50)
                     .clipShape(Circle())
@@ -959,6 +1008,7 @@ struct ScoreHeader: View {
     let score: Int
     let highScore: Int
     let needsRepositioning: Bool
+    let textColor: Color
     
     private var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
@@ -969,7 +1019,7 @@ struct ScoreHeader: View {
         VStack(spacing: 3) {
             // High score on top
             Text("\(highScore)")
-                .foregroundColor(.black)
+                .foregroundColor(textColor)
                 .font(.title)
                 .bold()
                 .transition(.opacity.combined(with: .scale))
@@ -978,7 +1028,7 @@ struct ScoreHeader: View {
             
             // Current score below
             Text("\(score)")
-                .foregroundColor(.black)
+                .foregroundColor(textColor)
                 .font(.title2)
                 .bold()
                 .transition(.opacity.combined(with: .scale))

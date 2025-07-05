@@ -18,14 +18,17 @@ class Achievements: ObservableObject {
     }
     
     private func authenticatePlayer() {
-        GKLocalPlayer.local.authenticateHandler = { viewController, error in
-            if let error = error {
-                print("🏆 GameKit auth error: \(error.localizedDescription)")
-                return
-            }
-            
-            if GKLocalPlayer.local.isAuthenticated {
-                print("🏆 GameKit authenticated successfully!")
+        // Delay GameKit authentication to not block startup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            GKLocalPlayer.local.authenticateHandler = { viewController, error in
+                if let error = error {
+                    print("🏆 GameKit auth error: \(error.localizedDescription)")
+                    return
+                }
+                
+                if GKLocalPlayer.local.isAuthenticated {
+                    print("🏆 GameKit authenticated successfully!")
+                }
             }
         }
     }

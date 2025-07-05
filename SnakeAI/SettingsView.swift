@@ -14,10 +14,12 @@ struct SettingsView: View {
     @Binding var powerUpsEnabled: Bool
     @Binding var enabledPowerUps: Set<PowerUpType>
     @Binding var isSoundEnabled: Bool
+    @Binding var selectedTheme: String
+    @Environment(\.colorScheme) private var colorScheme
     
     @State private var showingHighScoreAlert = false
     @State private var showingAllDataAlert = false
-
+    
     let baseIntervalForGameSpeed: (Int) -> TimeInterval
     
     private var appVersion: String {
@@ -38,6 +40,7 @@ struct SettingsView: View {
          powerUpsEnabled: Binding<Bool>,
          enabledPowerUps: Binding<Set<PowerUpType>>,
          isSoundEnabled: Binding<Bool>,
+         selectedTheme: Binding<String>,
          baseIntervalForGameSpeed: @escaping (Int) -> TimeInterval) {
         self._isOpen = isOpen
         self._wallsOn = wallsOn
@@ -53,7 +56,10 @@ struct SettingsView: View {
         self._enabledPowerUps = enabledPowerUps
         self._isSoundEnabled = isSoundEnabled
         self.baseIntervalForGameSpeed = baseIntervalForGameSpeed
+        self._selectedTheme = selectedTheme
     }
+    
+    
     
     var body: some View {
         NavigationView {
@@ -141,6 +147,110 @@ struct SettingsView: View {
                         Text("Enable AI autopilot to choose intelligence level")
                     }
                 }
+                
+                
+                // Background Theme Section
+                Section {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "paintpalette.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(.primary)
+                            .frame(width: 30)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Background Theme")
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
+                                ForEach([BackgroundTheme.jungle, .ocean, .desert], id: \.self) { theme in
+                                    Button(action: {
+                                        if colorScheme == .light {
+                                            selectedTheme = theme.rawValue
+                                            hapticsManager.toggleHaptic()
+                                        }
+                                    }) {
+                                        VStack(spacing: 4) {
+                                            VStack(spacing: 1) {
+                                                HStack(spacing: 1) {
+                                                    Rectangle()
+                                                        .fill(theme.colors.light)
+                                                        .frame(width: 12, height: 12)
+                                                    Rectangle()
+                                                        .fill(theme.colors.dark)
+                                                        .frame(width: 12, height: 12)
+                                                }
+                                                HStack(spacing: 1) {
+                                                    Rectangle()
+                                                        .fill(theme.colors.dark)
+                                                        .frame(width: 12, height: 12)
+                                                    Rectangle()
+                                                        .fill(theme.colors.light)
+                                                        .frame(width: 12, height: 12)
+                                                }
+                                            }
+                                            .cornerRadius(3)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 3)
+                                                    .stroke(selectedTheme == theme.rawValue && colorScheme == .light ? Color.blue : Color.clear, lineWidth: 2)
+                                            )
+                                            
+                                            Text(theme.rawValue)
+                                                .font(.caption2)
+                                                .foregroundColor(colorScheme == .dark ? .secondary : .primary)
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .disabled(colorScheme == .dark)
+                                    .opacity(colorScheme == .dark ? 0.6 : 1.0)
+                                }
+                                
+                                Button(action: {}) {
+                                    VStack(spacing: 4) {
+                                        VStack(spacing: 1) {
+                                            HStack(spacing: 1) {
+                                                Rectangle()
+                                                    .fill(BackgroundTheme.dark.colors.light)
+                                                    .frame(width: 12, height: 12)
+                                                Rectangle()
+                                                    .fill(BackgroundTheme.dark.colors.dark)
+                                                    .frame(width: 12, height: 12)
+                                            }
+                                            HStack(spacing: 1) {
+                                                Rectangle()
+                                                    .fill(BackgroundTheme.dark.colors.dark)
+                                                    .frame(width: 12, height: 12)
+                                                Rectangle()
+                                                    .fill(BackgroundTheme.dark.colors.light)
+                                                    .frame(width: 12, height: 12)
+                                            }
+                                        }
+                                        .cornerRadius(3)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 3)
+                                                .stroke(colorScheme == .dark ? Color.blue : Color.clear, lineWidth: 2)
+                                        )
+                                        
+                                        Text("Dark Mode")
+                                            .font(.caption2)
+                                            .foregroundColor(.primary)
+                                    }
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .disabled(true)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Background")
+                } footer: {
+                    if colorScheme == .dark {
+                        Text("Dark Mode is automatically active. Switch to Light Mode to choose other themes.")
+                    } else {
+                        Text("Choose your preferred background theme. Dark Mode activates automatically when system dark mode is enabled.")
+                    }
+                }
+                
                 
                 
                 // Power-ups Section
@@ -332,5 +442,62 @@ struct SettingsView: View {
         } else {
             return String(format: "%ds", seconds)
         }
+    }
+}
+
+
+
+struct ThemePreviewButton: View {
+    let theme: BackgroundTheme
+    let isSelected: Bool
+    let isDisabled: Bool
+    @Binding var selectedTheme: String
+    let colorScheme: ColorScheme
+    let hapticsManager: HapticsManager
+        
+    var body: some View {
+        Button(action: {
+            print("🎨 BUTTON: Tapped \(theme.rawValue), colorScheme=\(colorScheme), current selectedTheme='\(selectedTheme)'")
+            if colorScheme == .light && theme != .dark {
+                print("🎨 BUTTON: Setting selectedTheme to '\(theme.rawValue)'")
+                selectedTheme = theme.rawValue
+                hapticsManager.toggleHaptic()
+            } else {
+                print("🎨 BUTTON: Action blocked - colorScheme=\(colorScheme), theme=\(theme)")
+            }
+        }) {
+            VStack(spacing: 4) {
+                // 2x2 preview grid
+                VStack(spacing: 1) {
+                    HStack(spacing: 1) {
+                        Rectangle()
+                            .fill(theme.colors.light)
+                            .frame(width: 12, height: 12)
+                        Rectangle()
+                            .fill(theme.colors.dark)
+                            .frame(width: 12, height: 12)
+                    }
+                    HStack(spacing: 1) {
+                        Rectangle()
+                            .fill(theme.colors.dark)
+                            .frame(width: 12, height: 12)
+                        Rectangle()
+                            .fill(theme.colors.light)
+                            .frame(width: 12, height: 12)
+                    }
+                }
+                .cornerRadius(3)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
+                )
+                
+                Text(theme.rawValue)
+                    .font(.caption2)
+                    .foregroundColor(isDisabled ? .secondary : .primary)
+            }
+        }
+        .disabled(isDisabled && theme != .dark)
+        .opacity(isDisabled && theme != .dark ? 0.6 : 1.0)
     }
 }
