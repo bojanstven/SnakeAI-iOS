@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake AI - iOS Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .hero {
+            text-align: center;
+            color: white;
+            padding: 60px 0;
+        }
+
+        .hero h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero p {
+            font-size: 1.3em;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .app-store-btn {
+            display: inline-block;
+            background: #000;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .app-store-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-top: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .feature {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .feature ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .feature li {
+            padding: 5px 0;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .feature li:before {
+            content: "🎮";
+            position: absolute;
+            left: 0;
+        }
+
+        .theme-preview {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .theme {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            min-width: 120px;
+        }
+
+        .theme-jungle { background: linear-gradient(135deg, #8CA68C, #829C82); }
+        .theme-ocean { background: linear-gradient(135deg, #7A8FA6, #6B7F96); }
+        .theme-desert { background: linear-gradient(135deg, #A68C7A, #8B6F4D); }
+        .theme-dark { background: linear-gradient(135deg, #262626, #1A1A1A); }
+
+        .theme h4 {
+            color: white;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .theme-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            width: 24px;
+            height: 24px;
+            margin: 0 auto;
+        }
+
+        .theme-tile {
+            width: 11px;
+            height: 11px;
+            opacity: 0.8;
+        }
+
+        .requirements {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+
+        .version-info {
+            background: #f1f8e9;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            color: white;
+        }
+
+        .links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .link-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.3s ease;
+        }
+
+        .link-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <h1>🐍 Snake AI</h1>
+            <p>Experience the classic Snake game reimagined with intelligent AI opponents and stunning visual themes</p>
+            <a href="https://apps.apple.com/app/snake-ai/your-app-id" class="app-store-btn">📱 Download from App Store</a>
+            <a href="https://bojanstven.github.io/SnakeAI-Web/" class="app-store-btn">🌐 Play Web Version</a>
+        </div>
+
+        <div class="content">
+            <h2>🌟 Features</h2>
+            
+            <div class="features">
+                <div class="feature">
+                    <h3>🎨 Beautiful Visual Themes</h3>
+                    <ul>
+                        <li>Jungle Green - Classic retro feel</li>
+                        <li>Ocean Blue - Calming aquatic theme</li>
+                        <li>Desert Brown - Warm earth tones</li>
+                        <li>Dark Mode - Automatic system integration</li>
+                    </ul>
+                </div>
+
+                <div class="feature">
+                    <h3>🤖 AI-Powered Gameplay</h3>
+                    <ul>
+                        <li>Basic AI - Simple pathfinding</li>
+                        <li>Smart AI - Advanced collision avoidance</li>
+                        <li>Genius AI - Sophisticated A* algorithm</li>
+                    </ul>
+                </div>
+
+                <div class="feature">
+                    <h3>⚡ Power-ups & Customization</h3>
+                    <ul>
+                        <li>Speed Boost - 2× faster movement</li>
+                        <li>Slow Motion - ½ speed precision</li>
+                        <li>3× Points - Triple score multiplier</li>
+                        <li>Customizable Speed - 5 difficulty levels</li>
+                    </ul>
+                </div>
+
+                <div class="feature">
+                    <h3>🎮 Multiple Control Options</h3>
+                    <ul>
+                        <li>Touch Controls - Intuitive swipe gestures</li>
+                        <li>Game Controller - Full MFi support</li>
+                        <li>Tap to Pause - Quick interruption</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2>🎨 Theme Preview</h2>
+            <div class="theme-preview">
+                <div class="theme theme-jungle">
+                    <h4>Jungle Green</h4>
+                    <div class="theme-grid">
+                        <div class="theme-tile" style="background: #8CA68C;"></div>
+                        <div class="theme-tile" style="background: #829C82;"></div>
+                        <div class="theme-tile" style="background: #829C82;"></div>
+                        <div class="theme-tile" style="background: #8CA68C;"></div>
+                    </div>
+                </div>
+                
+                <div class="theme theme-ocean">
+                    <h4>Ocean Blue</h4>
+                    <div class="theme-grid">
+                        <div class="theme-tile" style="background: #7A8FA6;"></div>
+                        <div class="theme-tile" style="background: #6B7F96;"></div>
+                        <div class="theme-tile" style="background: #6B7F96;"></div>
+                        <div class="theme-tile" style="background: #7A8FA6;"></div>
+                    </div>
+                </div>
+                
+                <div class="theme theme-desert">
+                    <h4>Desert Brown</h4>
+                    <div class="theme-grid">
+                        <div class="theme-tile" style="background: #A68C7A;"></div>
+                        <div class="theme-tile" style="background: #8B6F4D;"></div>
+                        <div class="theme-tile" style="background: #8B6F4D;"></div>
+                        <div class="theme-tile" style="background: #A68C7A;"></div>
+                    </div>
+                </div>
+                
+                <div class="theme theme-dark">
+                    <h4>Dark Mode</h4>
+                    <div class="theme-grid">
+                        <div class="theme-tile" style="background: #262626;"></div>
+                        <div class="theme-tile" style="background: #1A1A1A;"></div>
+                        <div class="theme-tile" style="background: #1A1A1A;"></div>
+                        <div class="theme-tile" style="background: #262626;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="version-info">
+                <h3>🚀 What's New in v3.3</h3>
+                <ul>
+                    <li>🎨 <strong>New Background Themes</strong> - Choose from 4 stunning color schemes</li>
+                    <li>🌙 <strong>Smart Dark Mode</strong> - Automatic theme switching with system settings</li>
+                    <li>⚡ <strong>Performance Improvements</strong> - Smoother gameplay and faster startup</li>
+                    <li>🎮 <strong>Enhanced UI</strong> - Refined theme selector with live previews</li>
+                </ul>
+            </div>
+
+            <div class="requirements">
+                <h3>📱 Requirements</h3>
+                <ul>
+                    <li><strong>iOS 17.0+</strong></li>
+                    <li><strong>iPhone</strong> or <strong>iPad</strong></li>
+                    <li><strong>Optional</strong>: MFi Game Controller for enhanced gameplay</li>
+                </ul>
+            </div>
+
+            <h2>🎯 How to Play</h2>
+            <ol>
+                <li><strong>Choose Your Mode</strong>: Manual control or AI autopilot</li>
+                <li><strong>Select Theme</strong>: Pick your favorite color scheme</li>
+                <li><strong>Customize Settings</strong>: Adjust speed, walls, and power-ups</li>
+                <li><strong>Start Playing</strong>: Swipe to control, collect food, avoid collisions</li>
+                <li><strong>Beat Your High Score</strong>: Challenge yourself or watch AI compete</li>
+            </ol>
+
+            <h2>🏆 Achievements</h2>
+            <p>Unlock achievements through GameKit integration:</p>
+            <ul>
+                <li>🎮 <strong>First Controller</strong> - Connect a game controller</li>
+                <li>🎯 <strong>Persistent Player</strong> - Play 10 games</li>
+                <li>🏆 <strong>High Scorer</strong> - Reach 100 points in a single game</li>
+                <li>⚡ <strong>Speed Demon</strong> - Win a game with 2× speed active</li>
+            </ul>
+
+            <h2>🔄 Coming Soon</h2>
+            <ul>
+                <li>🆚 <strong>AI Opponent Mode</strong> - Race against AI snake</li>
+                <li>👥 <strong>Multiplayer</strong> - Challenge friends in real-time</li>
+                <li>🏆 <strong>Tournament Mode</strong> - Competitive brackets</li>
+                <li>📊 <strong>Global Leaderboards</strong> - Compete worldwide</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <h3>🔗 Links</h3>
+            <div class="links">
+                <a href="https://apps.apple.com/app/snake-ai/your-app-id" class="link-btn">📱 App Store</a>
+                <a href="https://bojanstven.github.io/SnakeAI-Web/" class="link-btn">🌐 Web Version</a>
+                <a href="https://github.com/bojanstven/SnakeAI-iOS" class="link-btn">💻 GitHub</a>
+                <a href="https://github.com/bojanstven" class="link-btn">👨‍💻 Developer</a>
+            </div>
+            <p><strong>Made with ❤️ and lots of ☕ by Bojan Stven</strong></p>
+        </div>
+    </div>
+</body>
+</html>
